@@ -61,13 +61,14 @@ class BG7(QThread):
         self.timer.setInterval(100)
 
         self.timeout_timer = QTimer()
-        self.timeout_timer.setInterval(1000)
+        self.timeout_timer.setInterval(3000)
 
         self.data = bytes('')
         self.connect(self.timer, QtCore.SIGNAL('timeout()'), self.check_serial)        
         self.connect(self.timeout_timer, QtCore.SIGNAL('timeout()'), self.timeout_serial)        
         self.fp = None
         self.restart = False
+        self.do_debug = False
         
         self.sport = sport
         try:
@@ -135,6 +136,11 @@ class BG7(QThread):
             self.timeout_timer.stop()
             
             if len(self.data) == 4 * self.num_samples:
+                if self.do_debug:
+                    tmp = np.array(struct.unpack('<'+str(self.num_samples*4)+'B', self.data))
+                    np.save('raw_dump', tmp)
+                                   
+                
                 if not self.restart:
                     self.emit(QtCore.SIGNAL('measurement_complete(PyQt_PyObject)'),
                               (np.array(struct.unpack('<'+str(self.num_samples*2)+'H', self.data)[::2]),

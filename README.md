@@ -57,4 +57,7 @@ ability to annotate the DAB channels (11D, 12B & 12D) in my plot).
 7. Figure out way the y-axis units are - prolly part of (1)
 8. Improve GUI to allow easy selection of centre frequency.
 9. Fix bugs....
+10. Better error handling (eg. when it can't open the serial port)
+11. Platform independent way to select a serial port
+12. Remember settings (frequency, bandwidth, max hold, etc) from last use.
 

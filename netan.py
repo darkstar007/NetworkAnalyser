@@ -1,5 +1,14 @@
 #!/usr/bin/env python
 
+#
+# This code is licenced under the GPL version 2, a copy of which is attached
+# in the files called 'LICENSE'
+#
+#
+# Copyright Matt Nottingham, 2015
+#
+#
+
 import os
 import os.path as osp
 from PyQt4 import QtGui
@@ -350,7 +359,7 @@ class MainWindow(QMainWindow):
     def about(self):
         QMessageBox.about( self, _("About ")+APP_NAME,
               """<b>%s</b> v%s<p>%s Matt Nottingham
-              <br>Copyright &copy; 2014 Matt Nottingham
+              <br>Copyright &copy; 2015 Matt Nottingham
               <p>Python %s, Qt %s, PyQt %s %s %s""" % \
               (APP_NAME, VERS, _("Developped by"), platform.python_version(),
                QT_VERSION_STR, PYQT_VERSION_STR, _("on"), platform.system()) )

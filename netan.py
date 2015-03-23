@@ -54,8 +54,8 @@ class BG7(QThread):
     def __init__(self, sport='/dev/ttyUSB0'):
         QThread.__init__(self)
 
-        self.start_freq = 88e6
-        self.step_size = 10e3
+        self.start_freq = 2.3e9
+        self.step_size = 50e3
         self.num_samples = 6000
         self.timer = QTimer()
         self.timer.setInterval(100)

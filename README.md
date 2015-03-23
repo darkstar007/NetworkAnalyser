@@ -1,5 +1,6 @@
 # NetworkAnalyser 
 
+## Introduction
 Python program that uses the BG7 network analyser which is available from a number of ebay sellers (such as
 [here](http://www.ebay.co.uk/itm/35MHz-4-4GHz-USB-SMA-Source-Signal-Generator-Simple-Spectrum-Analyzer-35M-4-4G-/311103521591)
  ). What the actual name of the device is, isn't that clear! 
@@ -21,8 +22,12 @@ Its early days for the program - I'm sure there are a whole bunch of
 bugs and missing features. And not having any documentation doesn't
 help!
 
-# Screenshot
+## Screenshot(s)
 
+This is a screenshot of attaching an antenna to the input and looking at the local DAB transmitter:
 ![](https://github.com/darkstar007/NetworkAnalyser/blob/master/doc/screenshots/netan_screen1.jpg)
 
+## Code description
+
+T.B.D.
 

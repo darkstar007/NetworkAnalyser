@@ -16,11 +16,11 @@ it expected).  So I wrote my own program to talk to the device that:
 * does mean and max hold
 * can zoom and scroll around
 * can rescan to the current bounds of the frequency axis
-* has a progress bar to show 
+* has a progress bar to show data transfer from the device
 
 Its early days for the program - I'm sure there are a whole bunch of
-bugs and missing features. And not having any documentation doesn't
-help!
+bugs and missing features. And not having any real documentation about the
+device doesn't help!
 
 ## Screenshot(s)
 

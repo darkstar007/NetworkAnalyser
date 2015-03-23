@@ -200,6 +200,15 @@ class CentralWidget(QSplitter):
         if data != None:
             self.raw_data['latest']['data'] = data[:]
             self.raw_data['latest']['freqs'] = (np.arange(num_samples) * step_size) + start_freq
+            units = 'MHz'
+            if self.raw_data['latest']['freqs'][num_samples/2] > 1e9:
+                self.raw_data['latest']['freqs'] /= 1e9
+                units = 'GHz'
+            else:
+                self.raw_data['latest']['freqs'] /= 1e6
+
+            self.curvewidget.plot.set_axis_unit(BasePlot.X_BOTTOM, units)
+                
             self.show_data('latest')
 
             if self.count_data == 1:
@@ -226,6 +235,7 @@ class CentralWidget(QSplitter):
     def show_data(self, label):
         data = self.raw_data[label]['data']
         xaxis = self.raw_data['latest']['freqs']
+        print 'xmin', np.min(xaxis), np.max(xaxis)
         
         self.dshape = data.shape[0]
 
@@ -266,9 +276,17 @@ class CentralWidget(QSplitter):
     def rescan(self):
         print self.curvewidget.plot.get_axis_limits(BasePlot.X_BOTTOM)
         ax = self.curvewidget.plot.get_axis_limits(BasePlot.X_BOTTOM)
+        un = self.curvewidget.plot.get_axis_unit(BasePlot.X_BOTTOM)
+        if un == 'MHz':
+            factor = 1e6
+        elif un == 'GHz':
+            factor = 1e9
+        else:
+            factor = 1.0
+            
         self.reset_data()
         
-        self.bg7.setParams(ax[0], ax[1]-ax[0])
+        self.bg7.setParams(ax[0] * factor, (ax[1]-ax[0]) * factor)
 
         #self.bg7.start()
         

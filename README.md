@@ -16,7 +16,7 @@ it expected).  So I wrote my own program to talk to the device that:
 * does mean and max hold
 * can zoom and scroll around
 * can rescan to the current bounds of the frequency axis
-* has a progress bar to show data transfer from the device
+* has a progress bar to show the data transfer from the device
 
 Its early days for the program - I'm sure there are a whole bunch of
 bugs and missing features. And not having any real documentation about the
@@ -26,6 +26,10 @@ device doesn't help!
 
 This is a screenshot of attaching an antenna to the input and looking at the local DAB transmitter:
 ![](https://github.com/darkstar007/NetworkAnalyser/blob/master/doc/screenshots/netan_screen1.jpg)
+
+And this is the view of FM stereo broadcast stations:
+![](https://github.com/darkstar007/NetworkAnalyser/blob/master/doc/screenshots/netan_screen2.jpg)
+
 
 ## Code description
 

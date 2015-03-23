@@ -31,7 +31,7 @@ This is a screenshot of attaching an antenna to the input and looking at the loc
 
 T.B.D.
 
-## Dependancies
+## Dependencies
 
 * [guidata](https://code.google.com/p/guidata/)
 * [guiqwt](https://code.google.com/p/guiqwt/) 
@@ -39,5 +39,18 @@ T.B.D.
 * Qt4
 
 These are all available in Debian (and also Python(x,y) for Windows) -
-fedora users will have to install the first two packages themselves (I beleive).
+fedora users will have to install the first two packages themselves (I believe).
+
+## ToDo
+
+1. Look at calibration (tx & rx?)
+2. Easy way to save data to disk (numpy arrays and screenshots).
+3. Allow access to an database of known bands (so in my DAB example above, my GUI would have the
+ability to annotate the DAB channels (11D, 12B & 12D) in my plot).
+4. Move the GUI toolkit from guiqwt/guidata as they do not appear to be maintained any more.
+5. Allow better use of GUI with touchscreen - I'm thinking RPi2/BBB with a small touchscreen on it would be a cool bit of test equipment.
+6. Better label of frequency axis (i.e. mega, giga) - as 220MHz is much easier than 2.2e8!
+7. Figure out way the y-axis units are - prolly part of (1)
+8. Improve GUI to allow easy selection of centre frequency.
+9. Fix bugs....
 

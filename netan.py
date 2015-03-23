@@ -162,6 +162,7 @@ class CentralWidget(QSplitter):
 
         self.curvewidget.add_toolbar(toolbar, "default")
         self.curvewidget.register_all_image_tools()
+        self.curvewidget.plot.set_axis_title(BasePlot.X_BOTTOM, 'Frequency')
         
         self.addWidget(self.curvewidget)
         self.prog = QProgressBar()

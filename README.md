@@ -21,4 +21,8 @@ Its early days for the program - I'm sure there are a whole bunch of
 bugs and missing features. And not having any documentation doesn't
 help!
 
+# Screenshot
+
+![](https://github.com/github/darkstar007/NetworkAnalyser/doc/screenshot/netan_screen1.jpg)
+
 

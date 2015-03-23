@@ -23,6 +23,6 @@ help!
 
 # Screenshot
 
-![](https://github.com/darkstar007/NetworkAnalyser/doc/screenshots/netan_screen1.jpg)
+![](https://github.com/darkstar007/NetworkAnalyser/blob/master/doc/screenshots/netan_screen1.jpg)
 
 

@@ -31,3 +31,13 @@ This is a screenshot of attaching an antenna to the input and looking at the loc
 
 T.B.D.
 
+## Dependancies
+
+* [guidata](https://code.google.com/p/guidata/)
+* [guiqwt](https://code.google.com/p/guiqwt/) 
+* QWT5
+* Qt4
+
+These are all available in Debian (and also Python(x,y) for Windows) -
+fedora users will have to install the first two packages themselves (I beleive).
+

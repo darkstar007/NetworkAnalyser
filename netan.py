@@ -52,12 +52,16 @@ APP_NAME = _("Network Analyser")
 VERS = '0.0.1'
 
 class BG7(QThread):
-    def __init__(self, sport='/dev/ttyUSB0'):
+    def __init__(self, start_freq, bandwidth, num_samps, sport='/dev/ttyUSB0'):
         QThread.__init__(self)
 
-        self.start_freq = 190e6
-        self.step_size = 10e3
-        self.num_samples = 6000
+        self.start_freq = start_freq
+        self.num_samples = num_samps
+        self.step_size = bandwidth / float(num_samps)
+
+        if self.num_samples > 9999:
+            raise ValueError('Too many samples requested')
+        
         self.timer = QTimer()
         self.timer.setInterval(100)
 
@@ -158,7 +162,7 @@ class BG7(QThread):
                 self.timeout_timer.start()
 
 class CentralWidget(QSplitter):
-    def __init__(self, parent, toolbar):
+    def __init__(self, parent, settings, toolbar, start_freq, bandwidth, numpts):
         QSplitter.__init__(self, parent)
         self.setContentsMargins(10, 10, 10, 10)
         self.setOrientation(Qt.Vertical)
@@ -170,7 +174,8 @@ class CentralWidget(QSplitter):
         self.reset_data()
         self.colours = ['b', 'r', 'c', 'y']
         self.legend = None
-
+        self.settings = settings
+        
         self.curvewidget.add_toolbar(toolbar, "default")
         self.curvewidget.register_all_image_tools()
         self.curvewidget.plot.set_axis_title(BasePlot.X_BOTTOM, 'Frequency')
@@ -187,7 +192,23 @@ class CentralWidget(QSplitter):
         self.connect(self.curvewidget.plot,
                      guiqwt.signals.SIG_PLOT_AXIS_CHANGED, self.axes_changed)
 
-        self.bg7 = BG7()
+        if start_freq == None:
+            start_freq = self.settings.value('spectrum/start_freq', 190e6).toFloat()[0]
+
+        if bandwidth == None:
+            bandwidth = self.settings.value('spectrum/bandwidth', 50e6).toFloat()[0]
+
+        if numpts == None:
+            numpts = self.settings.value('spectrum/num_samps', 6000).toInt()[0]
+            
+        print start_freq, bandwidth, numpts
+
+        self.settings.setValue('spectrum/start_freq', start_freq)
+        self.settings.setValue('spectrum/bandwidth', bandwidth)
+        self.settings.setValue('spectrum/num_samps', numpts)
+
+        
+        self.bg7 = BG7(start_freq, bandwidth, numpts)
         self.connect(self.bg7, QtCore.SIGNAL('measurement_progress(PyQt_PyObject)'),
                      self.measurement_progress)
         self.connect(self.bg7, QtCore.SIGNAL('measurement_complete(PyQt_PyObject)'),
@@ -299,19 +320,25 @@ class CentralWidget(QSplitter):
         
         self.bg7.setParams(ax[0] * factor, (ax[1]-ax[0]) * factor)
 
+        self.settings.setValue('spectrum/start_freq', ax[0] * factor)
+        self.settings.setValue('spectrum/bandwidth', (ax[1] - ax[0]) * factor)
+ 
         #self.bg7.start()
         
     def do_max_hold(self):
         self.max_hold = not self.max_hold
         
 class MainWindow(QMainWindow):
-    def __init__(self):
+    def __init__(self, reset=False, start_freq=None,
+                        bandwidth=None, numpts=None):
         QMainWindow.__init__(self)
-        self.settings = QSettings("mmmmxx", "networkanal")
+        self.settings = QSettings("Darkstar007", "networkanalyser")
+        if reset:
+            self.settings.clear()
+            
+        self.setup(start_freq, bandwidth, numpts)
         
-        self.setup()
-        
-    def setup(self):
+    def setup(self, start_freq, bandwidth, numpts):
         """Setup window parameters"""
         self.setWindowIcon(get_icon('python.png'))
         self.setWindowTitle(APP_NAME)
@@ -369,8 +396,9 @@ class MainWindow(QMainWindow):
         add_actions(main_toolbar, (open_action, rescan_action, max_hold_action))
         
         # Set central widget:
+
         toolbar = self.addToolBar("Image")
-        self.mainwidget = CentralWidget(self, toolbar)
+        self.mainwidget = CentralWidget(self, self.settings, toolbar, start_freq, bandwidth, numpts)
         self.setCentralWidget(self.mainwidget)
 
     def do_scan(self):
@@ -394,10 +422,45 @@ class MainWindow(QMainWindow):
               (APP_NAME, VERS, _("Developped by"), platform.python_version(),
                QT_VERSION_STR, PYQT_VERSION_STR, _("on"), platform.system()) )
 
+import getopt
+
+def usage():
+    print 'netan.py [options]'
+    print '-r/--reset                  Reset the defaults'
+    print '-s/--start_freq <freq>      Set the start frequency'
+    print '-b/--bandwidth <freq>       Set the bandwidth'
+    print '-n/--numpts <number>        Set the number of points in the sweep'
+
+    return
+
 if __name__ == '__main__':
     from guidata import qapplication
+    try:
+        optlist,args = getopt.getopt(sys.argv[1:], 'rs:b:n:',
+                                     ['reset', 'start_freq=', 'bandwidth=', 'numpts='])
+    except getopt.GetoptError as err:
+        print(err)
+        usage()
+        sys.exit(2)
+
+    reset = False
+    start_freq = None
+    bandwidth = None
+    numpts = None
+    
+    for o,a in optlist:
+        if o in ('-r', '--reset'):
+            reset = True
+        elif o in ('-s', '--start_freq'):
+            start_freq = float(a)
+        elif o in ('-b', '--bandwidth'):
+            bandwidth = float(a)
+        elif o in ('-n', '--numpts'):
+            numpts = int(a)
+
     app = qapplication()
-    window = MainWindow()
+    window = MainWindow(reset=reset, start_freq=start_freq,
+                        bandwidth=bandwidth, numpts=numpts)
     window.show()
     app.exec_()
 

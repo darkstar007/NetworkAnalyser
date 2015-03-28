@@ -46,6 +46,7 @@ from scipy.ndimage import gaussian_filter
 import h5py
 import serial
 import struct
+import datetime
 
 APP_NAME = _("Network Analyser")
 VERS = '0.0.1'
@@ -54,8 +55,8 @@ class BG7(QThread):
     def __init__(self, sport='/dev/ttyUSB0'):
         QThread.__init__(self)
 
-        self.start_freq = 2.3e9
-        self.step_size = 50e3
+        self.start_freq = 190e6
+        self.step_size = 10e3
         self.num_samples = 6000
         self.timer = QTimer()
         self.timer.setInterval(100)
@@ -122,6 +123,7 @@ class BG7(QThread):
             self.fp.write('\x8f\x78'+format(int(self.start_freq/10.0), '09')+
                           format(int(self.step_size/10.0), '08')+
                           format(int(self.num_samples), '04'))
+            self.start_time = datetime.datetime.now()
             self.data = bytes('')
             self.timer.start()
             self.timeout_timer.start()
@@ -136,6 +138,9 @@ class BG7(QThread):
             self.timeout_timer.stop()
             
             if len(self.data) == 4 * self.num_samples:
+                diff = datetime.datetime.now() - self.start_time
+                print 'Time taken', diff
+                print 'Time per sample', diff.total_seconds() / self.num_samples
                 if self.do_debug:
                     tmp = np.array(struct.unpack('<'+str(self.num_samples*4)+'B', self.data))
                     np.save('raw_dump', tmp)

@@ -22,6 +22,13 @@ Its early days for the program - I'm sure there are a whole bunch of
 bugs and missing features. And not having any real documentation about the
 device doesn't help!
 
+## Timings
+
+I have done some timings from the device and it appears to send output
+at around 4.2ms/sample. This means a 6,000 sample sweep will take
+~25seconds (6000 * 0.0042).  The time per sample doesn't seem to
+change with centre frequency, number of samples or bandwidth.
+
 ## Screenshot(s)
 
 This is a screenshot of attaching an antenna to the input and looking at the local DAB transmitter:

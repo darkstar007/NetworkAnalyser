@@ -47,6 +47,8 @@ import h5py
 import serial
 import struct
 import datetime
+import time
+
 
 APP_NAME = _("Network Analyser")
 VERS = '0.0.1'
@@ -153,6 +155,10 @@ class BG7(QThread):
 
             if len(self.data) > 4 * self.num_samples:
                 print 'Got too much data!'
+                self.timer.stop()
+                self.timeout_timer.stop()
+                self.empty_buffer()
+                self.run()
                 
             if len(self.data) == 4 * self.num_samples:
                 diff = datetime.datetime.now() - self.start_time

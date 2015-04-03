@@ -51,7 +51,7 @@ import time
 
 
 APP_NAME = _("Network Analyser")
-VERS = '0.0.1'
+VERS = '0.1.0'
 
 class BG7(QThread):
     def __init__(self, start_freq, bandwidth, num_samps, sport='/dev/ttyUSB0'):
@@ -87,10 +87,11 @@ class BG7(QThread):
         self.empty_buffer()
 
     def empty_buffer(self):
+        print self.fp.inWaiting()
         while self.fp.inWaiting() > 0:
-            self.fp.read(self.fp.inWaiting())
-            time.sleep(0.25)
-            
+            pants = self.fp.read(self.fp.inWaiting())
+            time.sleep(0.5)
+            print 'empt_buff', self.fp.inWaiting()
         print 'Finished empty_buffer'
                          
     def timeout_serial(self):
@@ -237,10 +238,10 @@ class CentralWidget(QSplitter):
     def reset_data(self):
         self.count_data = 0
         self.raw_data = {}
-        self.raw_data['latest'] = {}
-        self.raw_data['max'] = {}
-        self.raw_data['mean'] = {}
-        self.raw_data['max']['data'] = None
+        self.raw_data['Latest'] = {}
+        self.raw_data['Max'] = {}
+        self.raw_data['Mean'] = {}
+        self.raw_data['Max']['data'] = None
         
     def measurement_progress(self, val):
         self.prog.setValue(int(val))
@@ -249,34 +250,34 @@ class CentralWidget(QSplitter):
         print 'cback'
         data, start_freq, step_size, num_samples = cback_data
         if data != None:
-            self.raw_data['latest']['data'] = data[:]
-            self.raw_data['latest']['freqs'] = (np.arange(num_samples) * step_size) + start_freq
+            self.raw_data['Latest']['data'] = data[:]
+            self.raw_data['Latest']['freqs'] = (np.arange(num_samples) * step_size) + start_freq
             units = 'MHz'
-            if self.raw_data['latest']['freqs'][num_samples/2] > 1e9:
-                self.raw_data['latest']['freqs'] /= 1e9
+            if self.raw_data['Latest']['freqs'][num_samples/2] > 1e9:
+                self.raw_data['Latest']['freqs'] /= 1e9
                 units = 'GHz'
             else:
-                self.raw_data['latest']['freqs'] /= 1e6
+                self.raw_data['Latest']['freqs'] /= 1e6
 
             self.curvewidget.plot.set_axis_unit(BasePlot.X_BOTTOM, units)
                 
-            self.show_data('latest')
+            self.show_data('Latest')
 
             if self.count_data == 0:
-                self.raw_data['mean']['data'] = data[:] * 1.0
+                self.raw_data['Mean']['data'] = data[:] * 1.0
             else:
-                self.raw_data['mean']['data'] = (((self.raw_data['mean']['data'] * self.count_data) + data[:]) /
+                self.raw_data['Mean']['data'] = (((self.raw_data['Mean']['data'] * self.count_data) + data[:]) /
                                                  (self.count_data + 1.0))
             self.count_data += 1
 
-            self.show_data('mean')
+            self.show_data('Mean')
         
             if self.max_hold:
-                if self.raw_data['max']['data'] == None:
-                    self.raw_data['max']['data'] = data[:]
+                if self.raw_data['Max']['data'] == None:
+                    self.raw_data['Max']['data'] = data[:]
                 else:
-                    self.raw_data['max']['data'][:] = np.maximum(self.raw_data['max']['data'], data)
-                self.show_data('max')
+                    self.raw_data['Max']['data'][:] = np.maximum(self.raw_data['Max']['data'], data)
+                self.show_data('Max')
 
         self.bg7.start()
         
@@ -285,7 +286,7 @@ class CentralWidget(QSplitter):
 
     def show_data(self, label):
         data = self.raw_data[label]['data']
-        xaxis = self.raw_data['latest']['freqs']
+        xaxis = self.raw_data['Latest']['freqs']
         print 'xmin', np.min(xaxis), np.max(xaxis)
         
         self.dshape = data.shape[0]

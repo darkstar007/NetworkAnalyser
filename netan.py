@@ -55,10 +55,11 @@ class BG7(QThread):
     def __init__(self, start_freq, bandwidth, num_samps, sport='/dev/ttyUSB0'):
         QThread.__init__(self)
 
+        
         self.start_freq = start_freq
         self.num_samples = num_samps
         self.step_size = bandwidth / float(num_samps)
-
+        
         if self.num_samples > 9999:
             raise ValueError('Too many samples requested')
         
@@ -81,6 +82,15 @@ class BG7(QThread):
         except Exception, e:
             print e
 
+        self.empty_buffer()
+
+    def empty_buffer(self):
+        while self.fp.inWaiting() > 0:
+            self.fp.read(self.fp.inWaiting())
+            time.sleep(0.25)
+            
+        print 'Finished empty_buffer'
+                         
     def timeout_serial(self):
         print 'Timeout serial'
         self.timeout_timer.stop()
@@ -140,7 +150,10 @@ class BG7(QThread):
             self.emit(QtCore.SIGNAL('measurement_progress(PyQt_PyObject)'),
                                     float(len(self.data) * 100.0) / float(4 * self.num_samples))
             self.timeout_timer.stop()
-            
+
+            if len(self.data) > 4 * self.num_samples:
+                print 'Got too much data!'
+                
             if len(self.data) == 4 * self.num_samples:
                 diff = datetime.datetime.now() - self.start_time
                 print 'Time taken', diff
@@ -216,7 +229,7 @@ class CentralWidget(QSplitter):
         self.bg7.start()
 
     def reset_data(self):
-        self.count_data = 1
+        self.count_data = 0
         self.raw_data = {}
         self.raw_data['latest'] = {}
         self.raw_data['max'] = {}
@@ -243,7 +256,7 @@ class CentralWidget(QSplitter):
                 
             self.show_data('latest')
 
-            if self.count_data == 1:
+            if self.count_data == 0:
                 self.raw_data['mean']['data'] = data[:] * 1.0
             else:
                 self.raw_data['mean']['data'] = (((self.raw_data['mean']['data'] * self.count_data) + data[:]) /
@@ -256,7 +269,7 @@ class CentralWidget(QSplitter):
                 if self.raw_data['max']['data'] == None:
                     self.raw_data['max']['data'] = data[:]
                 else:
-                    self.raw_data['max']['data'] = np.maximum(self.raw_data['max']['data'], data)
+                    self.raw_data['max']['data'][:] = np.maximum(self.raw_data['max']['data'], data)
                 self.show_data('max')
 
         self.bg7.start()
@@ -327,18 +340,19 @@ class CentralWidget(QSplitter):
         
     def do_max_hold(self):
         self.max_hold = not self.max_hold
+        self.settings.setValue('gui/max_hold', self.max_hold)
         
 class MainWindow(QMainWindow):
     def __init__(self, reset=False, start_freq=None,
-                        bandwidth=None, numpts=None):
+                        bandwidth=None, numpts=None, max_hold=None):
         QMainWindow.__init__(self)
         self.settings = QSettings("Darkstar007", "networkanalyser")
         if reset:
             self.settings.clear()
             
-        self.setup(start_freq, bandwidth, numpts)
+        self.setup(start_freq, bandwidth, numpts, max_hold)
         
-    def setup(self, start_freq, bandwidth, numpts):
+    def setup(self, start_freq, bandwidth, numpts, max_hold):
         """Setup window parameters"""
         self.setWindowIcon(get_icon('python.png'))
         self.setWindowTitle(APP_NAME)
@@ -392,6 +406,12 @@ class MainWindow(QMainWindow):
                                         checkable = True,
                                         triggered=self.do_max_hold)
 
+        if max_hold == None:
+            max_hold = self.settings.value('gui/max_hold', False).toBool()
+            print 'Got max_hold', max_hold
+        max_hold_action.setChecked(max_hold)
+
+        
         # Calibration action?
         add_actions(main_toolbar, (open_action, rescan_action, max_hold_action))
         
@@ -400,6 +420,10 @@ class MainWindow(QMainWindow):
         toolbar = self.addToolBar("Image")
         self.mainwidget = CentralWidget(self, self.settings, toolbar, start_freq, bandwidth, numpts)
         self.setCentralWidget(self.mainwidget)
+        
+        if max_hold:
+            self.do_max_hold()
+
 
     def do_scan(self):
         self.mainwidget.rescan()
@@ -430,14 +454,16 @@ def usage():
     print '-s/--start_freq <freq>      Set the start frequency'
     print '-b/--bandwidth <freq>       Set the bandwidth'
     print '-n/--numpts <number>        Set the number of points in the sweep'
-
+    print '-m/--max_hold               Turn on max hold'
+    
     return
 
 if __name__ == '__main__':
     from guidata import qapplication
     try:
-        optlist,args = getopt.getopt(sys.argv[1:], 'rs:b:n:',
-                                     ['reset', 'start_freq=', 'bandwidth=', 'numpts='])
+        optlist,args = getopt.getopt(sys.argv[1:], 'rs:b:n:m',
+                                     ['reset', 'start_freq=', 'bandwidth=', 'numpts=',
+                                      'max_hold'])
     except getopt.GetoptError as err:
         print(err)
         usage()
@@ -447,6 +473,7 @@ if __name__ == '__main__':
     start_freq = None
     bandwidth = None
     numpts = None
+    max_hold = None
     
     for o,a in optlist:
         if o in ('-r', '--reset'):
@@ -457,10 +484,13 @@ if __name__ == '__main__':
             bandwidth = float(a)
         elif o in ('-n', '--numpts'):
             numpts = int(a)
-
+        elif o in ('-m', '--max_hold'):
+            max_hold = True
+            
     app = qapplication()
     window = MainWindow(reset=reset, start_freq=start_freq,
-                        bandwidth=bandwidth, numpts=numpts)
+                        bandwidth=bandwidth, numpts=numpts,
+                        max_hold = max_hold)
     window.show()
     app.exec_()
 

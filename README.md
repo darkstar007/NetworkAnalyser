@@ -46,10 +46,12 @@ And this is the view of FM stereo broadcast stations:
 It looks like commands of are the form: `0x8f <command> <arguments>`, where command is:
 
 | Command | Description | Arguments |
-|---------|-------------|---------------------------|
+|:-------:|-------------|---------------------------|
 |    x    | Receive in log (power) mode    | `"%09d%08d%04d", frequency, stepSize, numSamples` |
 |    w    | Receive in linear (power) mode | `"%09d%08d%04d", frequency, stepSize, numSamples` |
 |    f    | CW frequency transmission | `"%09d", frequency` |
+
+`frequency` and `stepSize` are in 10Hz steps (i.e. 1000000 would be represented by 1000000/10 = 100000).
 
 ### Design
 T.B.D.
@@ -72,7 +74,7 @@ fedora users will have to install the first two packages themselves (I believe).
 ability to annotate the DAB channels (11D, 12B & 12D) in my plot).
 4. Move the GUI toolkit from guiqwt/guidata as they do not appear to be maintained any more.
 5. Allow better use of GUI with touchscreen - I'm thinking RPi2/BBB with a small touchscreen on it would be a cool bit of test equipment.
-6. Better label of frequency axis (i.e. mega, giga) - as 220MHz is much easier than 2.2e8!
+6. ~~Better label of frequency axis (i.e. mega, giga) - as 220MHz is much easier than 2.2e8!~~
 7. Figure out way the y-axis units are - prolly part of (1)
 8. Improve GUI to allow easy selection of centre frequency.
 9. Fix bugs....

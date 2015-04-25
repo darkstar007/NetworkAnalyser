@@ -39,11 +39,11 @@ from guiqwt.signals import SIG_LUT_CHANGED
 
 from guiqwt.plot import ImageDialog
 from guiqwt.builder import make
+
 import numpy as np
 import sys
 import platform
-from scipy.ndimage import gaussian_filter
-import h5py
+
 import serial
 import struct
 import datetime
@@ -51,7 +51,7 @@ import time
 
 
 APP_NAME = _("Network Analyser")
-VERS = '0.1.0'
+VERS = '0.2.0'
 
 class BG7(QThread):
     def __init__(self, start_freq, bandwidth, num_samps, sport='/dev/ttyUSB0'):
@@ -357,6 +357,12 @@ class CentralWidget(QSplitter):
         self.max_hold = not self.max_hold
         self.settings.setValue('gui/max_hold', self.max_hold)
         
+    def do_log_lin(self, new_state):
+        self.bg7.do_log(new_state)
+	self.reset_data()
+	
+        #self.settings.setValue('gui/log_lin', new_state)
+        
 class MainWindow(QMainWindow):
     def __init__(self, reset=False, start_freq=None,
                         bandwidth=None, numpts=None, max_hold=None):
@@ -421,6 +427,13 @@ class MainWindow(QMainWindow):
                                         checkable = True,
                                         triggered=self.do_max_hold)
 
+        log_lin_action = create_action(self, _("Log/Lin"),
+				       shortcut="Ctrl+L",
+				       icon=get_std_icon("ArrowRight"),
+				       tip=_("Use linear power receive mode"),
+				       checkable = True,
+				       triggered=self.do_log_lin)
+
         if max_hold == None:
             max_hold = self.settings.value('gui/max_hold', False).toBool()
             print 'Got max_hold', max_hold
@@ -428,7 +441,7 @@ class MainWindow(QMainWindow):
 
         
         # Calibration action?
-        add_actions(main_toolbar, (open_action, rescan_action, max_hold_action))
+        add_actions(main_toolbar, (open_action, rescan_action, max_hold_action, log_lin_action))
         
         # Set central widget:
 
@@ -445,6 +458,9 @@ class MainWindow(QMainWindow):
 
     def do_max_hold(self):
         self.mainwidget.do_max_hold()
+        
+    def do_log_lin(self):
+        self.mainwidget.do_log_lin()
         
     def saveFileDialog(self):
         print 'Save f dialog'

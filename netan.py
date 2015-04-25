@@ -61,7 +61,9 @@ class BG7(QThread):
         self.start_freq = start_freq
         self.num_samples = num_samps
         self.step_size = bandwidth / float(num_samps)
-        
+        self.log = None
+	self.do_log(True)   # Set the data to be collected in log mode by default
+	
         if self.num_samples > 9999:
             raise ValueError('Too many samples requested')
         
@@ -83,9 +85,15 @@ class BG7(QThread):
             self.reconnect()
         except Exception, e:
             print e
-
+	    
         self.empty_buffer()
 
+    def do_log(self, state):
+	if state:
+	    self.log = 'x'
+	else:
+	    self.log = 'w'
+    
     def empty_buffer(self):
         print self.fp.inWaiting()
         while self.fp.inWaiting() > 0:
@@ -137,7 +145,7 @@ class BG7(QThread):
                 self.step_size = self.tmp_step_size
                 
             print 'Sending command'
-            self.fp.write('\x8f\x78'+format(int(self.start_freq/10.0), '09')+
+            self.fp.write('\x8f' + self.log + format(int(self.start_freq/10.0), '09')+
                           format(int(self.step_size/10.0), '08')+
                           format(int(self.num_samples), '04'))
             self.start_time = datetime.datetime.now()

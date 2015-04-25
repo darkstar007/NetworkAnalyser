@@ -3,7 +3,9 @@
 ## Introduction
 Python program that uses the BG7 network analyser which is available from a number of ebay sellers (such as
 [here](http://www.ebay.co.uk/itm/35MHz-4-4GHz-USB-SMA-Source-Signal-Generator-Simple-Spectrum-Analyzer-35M-4-4G-/311103521591)
- ). What the actual name of the device is, isn't that clear! 
+ ). What the actual name of the device is, isn't that clear - but appears to be *BG7TBL*, with some technical details 
+[here](http://www.dalbert.net/?p=219)
+
 
 As I have no Windows machines, I needed some other way to use it. I
 looked at the code that was posted
@@ -40,6 +42,16 @@ And this is the view of FM stereo broadcast stations:
 
 ## Code description
 
+### Commands
+It looks like commands of are the form: `0x8f <command> <arguments>`, where command is:
+
+| Command | Description | Arguments |
+|---------|-------------|---------------------------|
+|    x    | Receive in log (power) mode    | `"%09d%08d%04d", frequency, stepSize, numSamples` |
+|    w    | Receive in linear (power) mode | `"%09d%08d%04d", frequency, stepSize, numSamples` |
+|    f    | CW frequency transmission | `"%09d", frequency` |
+
+### Design
 T.B.D.
 
 ## Dependencies

@@ -50,6 +50,10 @@ It looks like commands of are the form: `0x8f <command> <arguments>`, where comm
 |    x    | Receive in log (power) mode    | `"%09d%08d%04d", frequency, stepSize, numSamples` |
 |    w    | Receive in linear (power) mode | `"%09d%08d%04d", frequency, stepSize, numSamples` |
 |    f    | CW frequency transmission | `"%09d", frequency` |
+|    v    | Get firmware version | No argumens |
+!    r    | ??? | ??? |
+|    m/n  |  ??? | ??? |
+|    s    |  ??? | ??? |
 
 `frequency` and `stepSize` are in 10Hz steps (i.e. 1000000 would be represented by 1000000/10 = 100000).
 

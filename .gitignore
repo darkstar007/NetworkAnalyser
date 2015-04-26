@@ -55,3 +55,8 @@ target/
 
 # Debug numpy files
 *.npy
+
+#Editor cruft
+\#*\#
+*~
+

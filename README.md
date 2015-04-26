@@ -51,7 +51,7 @@ It looks like commands of are the form: `0x8f <command> <arguments>`, where comm
 |    w    | Receive in linear (power) mode | `"%09d%08d%04d", frequency, stepSize, numSamples` |
 |    f    | CW frequency transmission | `"%09d", frequency` |
 |    v    | Get firmware version | No argumens |
-!    r    | ??? | ??? |
+|    r    | ??? | ??? |
 |    m/n  |  ??? | ??? |
 |    s    |  ??? | ??? |
 

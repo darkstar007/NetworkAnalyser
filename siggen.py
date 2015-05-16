@@ -54,11 +54,8 @@ VERS = '0.0.1'
 class BG7(QThread):
     def __init__(self, freq, sport='/dev/ttyUSB0'):
         QThread.__init__(self)
-
         
-        self.start_freq = start_freq
-        self.num_samples = num_samps
-        self.step_size = bandwidth / float(num_samps)
+        self.freq = freq
 
         self.timeout_timer = QTimer()
         self.timeout_timer.setInterval(3000)
@@ -76,7 +73,9 @@ class BG7(QThread):
 	    
         self.empty_buffer()
 
-                         
+    def empty_buffer(self):
+        pass
+    
     def timeout_serial(self):
         print 'Timeout serial'
         self.timeout_timer.stop()
@@ -103,13 +102,10 @@ class BG7(QThread):
         if self.fp != None:
             if self.restart:
                 self.restart = False
-                self.start_freq = self.tmp_start_freq
-                self.num_samples = self.tmp_num_samples
-        
-                self.step_size = self.tmp_step_size
+                #self.freq = self.freq
                 
-            print 'Sending command'
-            self.fp.write('\x8f' + 'f' + format(int(self.start_freq/10.0), '09'))
+            print 'Sending command', self.freq
+            self.fp.write('\x8f' + 'f' + format(int(self.freq/10.0), '09'))
 	    
 
         
@@ -188,40 +184,34 @@ import getopt
 def usage():
     print 'siggen.py [options]'
     print '-r/--reset                  Reset the defaults'
-    print '-s/--start_freq <freq>      Set the start frequency'
-    print '-b/--bandwidth <freq>       Set the bandwidth'
-    print '-n/--numpts <number>        Set the number of points in the sweep'
+    print '-f/--freq <freq>            Set the frequency'
     
     return
 
 if __name__ == '__main__':
     from guidata import qapplication
     try:
-        optlist,args = getopt.getopt(sys.argv[1:], 'rs:b:n:',
-                                     ['reset', 'start_freq=', 'bandwidth=', 'numpts='])
+        optlist,args = getopt.getopt(sys.argv[1:], 'rf:',
+                                     ['reset', 'freq='])
     except getopt.GetoptError as err:
         print(err)
         usage()
         sys.exit(2)
 
     reset = False
-    start_freq = None
-    bandwidth = None
-    numpts = None
+    freq = 1.1e9
+
     
     for o,a in optlist:
-        if o in ('-r', '--reset'):
-            reset = True
-        elif o in ('-s', '--start_freq'):
-            start_freq = float(a)
-        elif o in ('-b', '--bandwidth'):
-            bandwidth = float(a)
-        elif o in ('-n', '--numpts'):
-            numpts = int(a)
+        if o in ('-f', '--freq'):
+            freq = float(a)
             
-    app = qapplication()
-    window = MainWindow(reset=reset, start_freq=start_freq,
-                        bandwidth=bandwidth, numpts=numpts)
-    window.show()
-    app.exec_()
+    #app = qapplication()
+    #window = MainWindow(reset=reset, start_freq=start_freq,
+    #                    bandwidth=bandwidth, numpts=numpts)
+    #window.show()
+    #app.exec_()
+    d = BG7(freq)
+    d.run()
+    
 

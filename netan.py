@@ -11,8 +11,8 @@
 
 import os
 import os.path as osp
-from PyQt4 import QtGui
-from PyQt4 import QtCore
+from guidata.qt import QtGui
+from guidata.qt import QtCore
 from guidata.qt.QtGui import QMainWindow, QMessageBox, QSplitter, QListWidget, QSpinBox
 
 from guidata.qt.QtGui import QFont, QDesktopWidget, QFileDialog, QProgressBar
@@ -32,10 +32,11 @@ from guidata.configtools import get_icon
 from guidata.qthelpers import create_action, add_actions, get_std_icon
 from guidata.utils import update_dataset
 from guidata.qt.QtCore import (QSize, QT_VERSION_STR, PYQT_VERSION_STR, Qt,
-                               SIGNAL)
+                               Signal, pyqtSignal)
 from guiqwt.config import _
 from guiqwt.plot import ImageWidget
-from guiqwt.signals import SIG_LUT_CHANGED
+#from guiqwt.signals import SIG_LUT_CHANGED
+import guiqwt.signals
 
 from guiqwt.plot import ImageDialog
 from guiqwt.builder import make
@@ -54,11 +55,16 @@ APP_NAME = _("Network Analyser")
 VERS = '0.2.0'
 
 class BG7(QThread):
+    measurement_progress = pyqtSignal(float)
+    measurement_complete = pyqtSignal(object, object, object, object)
+
     def __init__(self, start_freq, bandwidth, num_samps, sport='/dev/ttyUSB0'):
         QThread.__init__(self)
 
-        
+	
         self.start_freq = start_freq
+
+	print 'Freq', start_freq
         self.num_samples = num_samps
         self.step_size = bandwidth / float(num_samps)
         self.log = None
@@ -74,8 +80,10 @@ class BG7(QThread):
         self.timeout_timer.setInterval(3000)
 
         self.data = bytes('')
-        self.connect(self.timer, QtCore.SIGNAL('timeout()'), self.check_serial)        
-        self.connect(self.timeout_timer, QtCore.SIGNAL('timeout()'), self.timeout_serial)        
+
+	self.timer.timeout.connect(self.check_serial)
+	self.timeout_timer.timeout.connect(self.timeout_serial)
+
         self.fp = None
         self.restart = False
         self.do_debug = False
@@ -158,8 +166,8 @@ class BG7(QThread):
         if self.fp.inWaiting() > 0:
             self.data += self.fp.read(self.fp.inWaiting())
             #print 'Data', len(self.data), hex(ord(self.data[0])), hex(ord(self.data[1])), hex(ord(self.data[2])), hex(ord(self.data[3]))
-            self.emit(QtCore.SIGNAL('measurement_progress(PyQt_PyObject)'),
-                                    float(len(self.data) * 100.0) / float(4 * self.num_samples))
+            self.measurement_progress.emit(
+		float(len(self.data) * 100.0) / float(4 * self.num_samples))
             self.timeout_timer.stop()
 
             if len(self.data) > 4 * self.num_samples:
@@ -179,12 +187,12 @@ class BG7(QThread):
                                    
                 
                 if not self.restart:
-                    self.emit(QtCore.SIGNAL('measurement_complete(PyQt_PyObject)'),
-                              (np.array(struct.unpack('<'+str(self.num_samples*2)+'H', self.data)[::2]),
-                               self.start_freq, self.step_size, self.num_samples))
+                    self.measurement_complete.emit(
+			np.array(struct.unpack('<'+str(self.num_samples*2)+'H', self.data)[::2]),
+			self.start_freq, self.step_size, self.num_samples)
                 else:
-                    self.emit(QtCore.SIGNAL('measurement_complete(PyQt_PyObject)'),
-                              (None, None, None, None))
+                    self.measurement_complete.emit(None, None, None, None)
+		    
                 self.timer.stop()
             else:
                 self.timeout_timer.start()
@@ -217,17 +225,15 @@ class CentralWidget(QSplitter):
         self.setStretchFactor(2, 1)
         self.setHandleWidth(10)
         self.setSizes([1, 5, 1])
-        self.connect(self.curvewidget.plot,
-                     guiqwt.signals.SIG_PLOT_AXIS_CHANGED, self.axes_changed)
 
         if start_freq == None:
-            start_freq = self.settings.value('spectrum/start_freq', 190e6).toFloat()[0]
+            start_freq = float(self.settings.value('spectrum/start_freq', 190e6))
 
         if bandwidth == None:
-            bandwidth = self.settings.value('spectrum/bandwidth', 50e6).toFloat()[0]
+            bandwidth = float(self.settings.value('spectrum/bandwidth', 50e6))
 
         if numpts == None:
-            numpts = self.settings.value('spectrum/num_samps', 6000).toInt()[0]
+            numpts = int(self.settings.value('spectrum/num_samps', 6000))
             
         print start_freq, bandwidth, numpts
 
@@ -237,10 +243,9 @@ class CentralWidget(QSplitter):
 
         
         self.bg7 = BG7(start_freq, bandwidth, numpts)
-        self.connect(self.bg7, QtCore.SIGNAL('measurement_progress(PyQt_PyObject)'),
-                     self.measurement_progress)
-        self.connect(self.bg7, QtCore.SIGNAL('measurement_complete(PyQt_PyObject)'),
-                     self.measurement_complete)
+        self.bg7.measurement_progress.connect(self.measurement_progress)
+        self.bg7.measurement_complete.connect(self.measurement_complete)
+
         self.bg7.start()
 
     def reset_data(self):
@@ -254,9 +259,9 @@ class CentralWidget(QSplitter):
     def measurement_progress(self, val):
         self.prog.setValue(int(val))
         
-    def measurement_complete(self, cback_data):
-        print 'cback'
-        data, start_freq, step_size, num_samples = cback_data
+    def measurement_complete(self, data, start_freq, step_size, num_samples):
+        print 'cback', start_freq, step_size
+        #data, start_freq, step_size, num_samples = cback_data
         if data != None:
             self.raw_data['Latest']['data'] = data[:]
             self.raw_data['Latest']['freqs'] = (np.arange(num_samples) * step_size) + start_freq
@@ -435,8 +440,13 @@ class MainWindow(QMainWindow):
 				       triggered=self.do_log_lin)
 
         if max_hold == None:
-            max_hold = self.settings.value('gui/max_hold', False).toBool()
+            max_hold = self.settings.value('gui/max_hold', False)
             print 'Got max_hold', max_hold
+	    if type(max_hold) != bool:
+		if max_hold in ['y', 'Y', 'T', 'True', 'true', '1']:
+		    max_hold = True
+		else:
+		    max_hold = False
         max_hold_action.setChecked(max_hold)
 
         

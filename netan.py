@@ -44,6 +44,7 @@ from guiqwt.builder import make
 import numpy as np
 import sys
 import platform
+import cPickle
 
 import serial
 import struct
@@ -265,14 +266,15 @@ class CentralWidget(QSplitter):
         if data != None:
             self.raw_data['Latest']['data'] = data[:]
             self.raw_data['Latest']['freqs'] = (np.arange(num_samples) * step_size) + start_freq
-            units = 'MHz'
+            self.raw_data['Latest']['freq_units'] = 'MHz'
             if self.raw_data['Latest']['freqs'][num_samples/2] > 1e9:
                 self.raw_data['Latest']['freqs'] /= 1e9
-                units = 'GHz'
+                self.raw_data['Latest']['freq_units'] = 'GHz'
             else:
                 self.raw_data['Latest']['freqs'] /= 1e6
 
-            self.curvewidget.plot.set_axis_unit(BasePlot.X_BOTTOM, units)
+            self.curvewidget.plot.set_axis_unit(BasePlot.X_BOTTOM,
+						self.raw_data['Latest']['freq_units'])
                 
             self.show_data('Latest')
 
@@ -293,7 +295,17 @@ class CentralWidget(QSplitter):
                 self.show_data('Max')
 
         self.bg7.start()
-        
+
+    def save_cal_data(self, fname):
+	fp = open(fname, 'wb')
+	cPickle.dump(self.raw_data, fp)
+	fp.close()
+
+    def load_cal_data(self, fname):
+	fp = open(fname, 'rb')
+	cal_data = cPickle.load(fp)
+	
+    
     def axes_changed(self, plot):
         pass
 
@@ -361,7 +373,7 @@ class CentralWidget(QSplitter):
     def do_max_hold(self):
         self.max_hold = not self.max_hold
         self.settings.setValue('gui/max_hold', self.max_hold)
-        
+
     def do_log_lin(self, new_state):
         self.bg7.do_log(new_state)
 	self.reset_data()
@@ -397,16 +409,22 @@ class MainWindow(QMainWindow):
 
         open_action = create_action(self, _("Save"),
                                     shortcut="Ctrl+S",
-                                    icon=get_std_icon("FileIcon"),
-                                    tip=_("Save a File"),
+                                    icon=get_std_icon("DialogSaveButton"),
+                                    tip=_("Save a Cal File"),
                                     triggered=self.saveFileDialog)
+
+        load_action = create_action(self, _("Load"),
+                                    shortcut="Ctrl+L",
+                                    icon=get_std_icon("FileIcon"),
+                                    tip=_("Load a cal File"),
+                                    triggered=self.loadFileDialog)
 
         quit_action = create_action(self, _("Quit"),
                                     shortcut="Ctrl+Q",
                                     icon=get_std_icon("DialogCloseButton"),
                                     tip=_("Quit application"),
                                     triggered=self.close)
-        add_actions(file_menu, (open_action, None, quit_action))
+        add_actions(file_menu, (open_action, load_action, None, quit_action))
         
         # Help menu - prolly should just say "you're on your own..."!!
         help_menu = self.menuBar().addMenu("Help")
@@ -451,7 +469,8 @@ class MainWindow(QMainWindow):
 
         
         # Calibration action?
-        add_actions(main_toolbar, (open_action, rescan_action, max_hold_action, log_lin_action))
+        add_actions(main_toolbar, (open_action, load_action, rescan_action,
+				   max_hold_action, log_lin_action))
         
         # Set central widget:
 
@@ -461,7 +480,6 @@ class MainWindow(QMainWindow):
         
         if max_hold:
             self.do_max_hold()
-
 
     def do_scan(self):
         self.mainwidget.rescan()
@@ -474,10 +492,15 @@ class MainWindow(QMainWindow):
         
     def saveFileDialog(self):
         print 'Save f dialog'
-        fileName = QFileDialog.getOpenFileName(self, _("Open Image"), os.getenv('HOME'),
-                                               _("Image Files (*.png *.jpg *.bmp)"))
+        fileName = QFileDialog.getSaveFileName(self, _("Save Cal Data"), os.getenv('HOME'))
         print fileName
-        # Now do something!....
+        self.mainwidget.save_cal_data(fileName)
+        
+    def loadFileDialog(self):
+        print 'load f dialog'
+        fileName = QFileDialog.getOpenFileName(self, _("Open Cal Data"), os.getenv('HOME'))
+        print fileName
+        self.mainwidget.load_cal_data(fileName)
         
     def about(self):
         QMessageBox.about( self, _("About ")+APP_NAME,

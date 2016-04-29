@@ -55,15 +55,15 @@ It looks like commands of are the form: `0x8f <command> <arguments>`, where comm
 |    m/n  |  ??? | ??? |
 |    s    |  ??? | ??? |
 
-`frequency` and `stepSize` are in 10Hz steps (i.e. 1000000 would be represented by 1000000/10 = 100000).
+`frequency` and `stepSize` are in 10Hz steps (i.e. 1000000Hz would be represented by 1000000/10 = 100000).
 
 ### Design
 T.B.D.
 
 ## Dependencies
 
-* [guidata](https://code.google.com/p/guidata/)
-* [guiqwt](https://code.google.com/p/guiqwt/) 
+* [guidata](https://github.com/PierreRaybaut/guidata/)
+* [guiqwt](https://github.com/PierreRaybaut/guiqwt/) 
 * QWT5
 * Qt4
 

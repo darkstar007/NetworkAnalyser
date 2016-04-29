@@ -5,7 +5,7 @@
 # in the files called 'LICENSE'
 #
 #
-# Copyright Matt Nottingham, 2015
+# Copyright Matt Nottingham, 2015, 2016
 #
 #
 
@@ -35,7 +35,7 @@ from guidata.qt.QtCore import (QSize, QT_VERSION_STR, PYQT_VERSION_STR, Qt,
                                Signal, pyqtSignal)
 from guiqwt.config import _
 from guiqwt.plot import ImageWidget
-#from guiqwt.signals import SIG_LUT_CHANGED
+
 import guiqwt.signals
 
 from guiqwt.plot import ImageDialog
@@ -53,7 +53,7 @@ import time
 
 
 APP_NAME = _("Network Analyser")
-VERS = '0.2.0'
+VERS = '0.3.0'
 
 class BG7(QThread):
     measurement_progress = pyqtSignal(float)
@@ -69,7 +69,8 @@ class BG7(QThread):
         self.num_samples = num_samps
         self.step_size = bandwidth / float(num_samps)
         self.log = None
-	self.do_log(True)   # Set the data to be collected in log mode by default
+        self.log_mode = True
+	self.do_log(self.log_mode)   # Set the data to be collected in log mode by default
 	
         if self.num_samples > 9999:
             raise ValueError('Too many samples requested')
@@ -100,15 +101,17 @@ class BG7(QThread):
     def do_log(self, state):
 	if state:
 	    self.log = 'x'
+	    self.log_mode = True
 	else:
 	    self.log = 'w'
-    
+	    self.lof_mode = False
+	    
     def empty_buffer(self):
         print self.fp.inWaiting()
         while self.fp.inWaiting() > 0:
             pants = self.fp.read(self.fp.inWaiting())
             time.sleep(0.5)
-            print 'empt_buff', self.fp.inWaiting()
+            print 'trying to empty buff', self.fp.inWaiting()
         print 'Finished empty_buffer'
                          
     def timeout_serial(self):
@@ -153,7 +156,7 @@ class BG7(QThread):
         
                 self.step_size = self.tmp_step_size
                 
-            print 'Sending command'
+            print 'Sending command', self.log
             self.fp.write('\x8f' + self.log + format(int(self.start_freq/10.0), '09')+
                           format(int(self.step_size/10.0), '08')+
                           format(int(self.num_samples), '04'))
@@ -208,7 +211,6 @@ class CentralWidget(QSplitter):
         self.points = []
         self.max_hold = False
         self.do_log = True
-        self.reset_data()
         self.colours = ['b', 'r', 'c', 'y']
         self.legend = None
         self.settings = settings
@@ -244,6 +246,9 @@ class CentralWidget(QSplitter):
 
         
         self.bg7 = BG7(start_freq, bandwidth, numpts)
+
+	self.reset_data()
+
         self.bg7.measurement_progress.connect(self.measurement_progress)
         self.bg7.measurement_complete.connect(self.measurement_complete)
 
@@ -256,7 +261,8 @@ class CentralWidget(QSplitter):
         self.raw_data['Max'] = {}
         self.raw_data['Mean'] = {}
         self.raw_data['Max']['data'] = None
-        
+        self.raw_data['Logged'] = self.bg7.log_mode
+	
     def measurement_progress(self, val):
         self.prog.setValue(int(val))
         
@@ -294,18 +300,26 @@ class CentralWidget(QSplitter):
                     self.raw_data['Max']['data'][:] = np.maximum(self.raw_data['Max']['data'], data)
                 self.show_data('Max')
 
+	    if 'Cal Data' in self.raw_data.keys():
+		self.show_data('Cal Data')
+		
         self.bg7.start()
 
     def save_cal_data(self, fname):
 	fp = open(fname, 'wb')
 	cPickle.dump(self.raw_data, fp)
 	fp.close()
+        self.settings.setValue('spectrum/file_dir', os.path.dirname(fname))
 
     def load_cal_data(self, fname):
 	fp = open(fname, 'rb')
 	cal_data = cPickle.load(fp)
-	
-    
+	# Add some checks to make sure cal data is valid for our current setup
+	self.raw_data['Cal Data'] = {}
+	self.raw_data['Cal Data']['data'] = cal_data['Mean']['data'][:]
+	fp.close()
+	self.settings.setValue('spectrum/file_dir', os.path.dirname(fname))
+
     def axes_changed(self, plot):
         pass
 
@@ -388,6 +402,9 @@ class MainWindow(QMainWindow):
         if reset:
             self.settings.clear()
             
+	self.file_dir = self.settings.value('spectrum/file_dir', os.getenv('HOME'))
+	print 'File dir', self.file_dir
+	
         self.setup(start_freq, bandwidth, numpts, max_hold)
         
     def setup(self, start_freq, bandwidth, numpts, max_hold):
@@ -397,6 +414,7 @@ class MainWindow(QMainWindow):
         dt = QDesktopWidget()
         print dt.numScreens(), dt.screenGeometry()
         sz = dt.screenGeometry()
+
 
         self.resize(QSize(sz.width()*9/10, sz.height()*9/10))
         
@@ -492,13 +510,13 @@ class MainWindow(QMainWindow):
         
     def saveFileDialog(self):
         print 'Save f dialog'
-        fileName = QFileDialog.getSaveFileName(self, _("Save Cal Data"), os.getenv('HOME'))
+        fileName = QFileDialog.getSaveFileName(self, _("Save Cal Data"), self.file_dir)
         print fileName
         self.mainwidget.save_cal_data(fileName)
         
     def loadFileDialog(self):
         print 'load f dialog'
-        fileName = QFileDialog.getOpenFileName(self, _("Open Cal Data"), os.getenv('HOME'))
+        fileName = QFileDialog.getOpenFileName(self, _("Open Cal Data"), self.file_dir)
         print fileName
         self.mainwidget.load_cal_data(fileName)
         

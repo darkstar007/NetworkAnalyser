@@ -39,10 +39,10 @@ class BG7(QThread):
             raise ValueError('Too many samples requested')
         
         self.timer = QTimer()
-        self.timer.setInterval(100)
+        self.timer.setInterval(300)
 
         self.timeout_timer = QTimer()
-        self.timeout_timer.setInterval(3000)
+        self.timeout_timer.setInterval(5000)
 
         self.data = bytes('')
 
@@ -70,16 +70,16 @@ class BG7(QThread):
 	    self.lof_mode = False
 	    
     def empty_buffer(self):
-	time.sleep(1.0)
-        print self.fp.inWaiting()
+	time.sleep(3.0)
+        print 'BG7: EmptyBuffer: in waiting', self.fp.inWaiting()
         while self.fp.inWaiting() > 0:
             pants = self.fp.read(self.fp.inWaiting())
             time.sleep(1.5)
-            print 'trying to empty buff', self.fp.inWaiting()
-        print 'Finished empty_buffer'
+            print 'BG7: trying to empty buff', self.fp.inWaiting()
+        print 'BG7: Finished empty_buffer'
                          
     def timeout_serial(self):
-        print 'Timeout serial'
+        print 'BG7: Timeout serial'
         self.timeout_timer.stop()
         self.reconnect()
         self.run()
@@ -93,7 +93,7 @@ class BG7(QThread):
         
         self.tmp_step_size = bw / self.tmp_num_samples
         self.restart = True
-        print 'Restart', self.tmp_start_freq, self.tmp_num_samples,self.tmp_step_size
+        print 'BG7: Restart', self.tmp_start_freq, self.tmp_num_samples,self.tmp_step_size
         
     def reconnect(self):
         if self.fp != None:
@@ -120,7 +120,7 @@ class BG7(QThread):
         
                 self.step_size = self.tmp_step_size
                 
-            print 'Sending command', self.log
+            print 'BG7: Sending command', '\x8f' + self.log + format(int(self.start_freq/10.0), '09')+ format(int(self.step_size/10.0), '08')+ format(int(self.num_samples), '04')
             self.fp.write('\x8f' + self.log + format(int(self.start_freq/10.0), '09')+
                           format(int(self.step_size/10.0), '08')+
                           format(int(self.num_samples), '04'))
@@ -130,7 +130,7 @@ class BG7(QThread):
             self.timeout_timer.start()
             
     def check_serial(self):
-        #print 'Check', self.fp.inWaiting(), self.restart
+        print 'Check', self.fp.inWaiting(), len(self.data), self.restart
         if self.fp.inWaiting() > 0:
             self.data += self.fp.read(self.fp.inWaiting())
             #print 'Data', len(self.data), hex(ord(self.data[0])), hex(ord(self.data[1])), hex(ord(self.data[2])), hex(ord(self.data[3]))
@@ -139,7 +139,7 @@ class BG7(QThread):
             self.timeout_timer.stop()
 
             if len(self.data) > 4 * self.num_samples:
-                print 'Got too much data!'
+                print 'BG7: Got too much data!', len(self.data)
                 self.timer.stop()
                 self.timeout_timer.stop()
                 self.empty_buffer()
@@ -147,12 +147,11 @@ class BG7(QThread):
                 
             if len(self.data) == 4 * self.num_samples:
                 diff = datetime.datetime.now() - self.start_time
-                print 'Time taken', diff
-                print 'Time per sample', diff.total_seconds() / self.num_samples
+                print 'BG7: Time taken', diff
+                print 'BG7: Time per sample', diff.total_seconds() / self.num_samples
                 if self.do_debug:
                     tmp = np.array(struct.unpack('<'+str(self.num_samples*4)+'B', self.data))
-                    np.save('raw_dump', tmp)
-                                   
+                    np.save('raw_dump', tmp)                                   
                 
                 if not self.restart:
                     self.measurement_complete.emit(

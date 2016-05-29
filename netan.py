@@ -56,7 +56,7 @@ APP_NAME = _("Network Analyser")
 VERS = '0.3.0'
 
 class CentralWidget(QSplitter):
-    def __init__(self, parent, settings, toolbar, start_freq, bandwidth, numpts):
+    def __init__(self, parent, settings, toolbar, start_freq, bandwidth, numpts, dev):
         QSplitter.__init__(self, parent)
         self.setContentsMargins(10, 10, 10, 10)
         self.setOrientation(Qt.Vertical)
@@ -99,7 +99,7 @@ class CentralWidget(QSplitter):
         self.settings.setValue('spectrum/num_samps', numpts)
 
         
-        self.bg7 = BG7(start_freq, bandwidth, numpts)
+        self.bg7 = BG7(start_freq, bandwidth, numpts, sport=dev)
 
 	self.reset_data()
 
@@ -254,7 +254,8 @@ class CentralWidget(QSplitter):
         
 class MainWindow(QMainWindow):
     def __init__(self, reset=False, start_freq=None,
-                        bandwidth=None, numpts=None, max_hold=None):
+		 bandwidth=None, numpts=None, max_hold=None,
+		 dev='/dev/ttyUSB0'):
         QMainWindow.__init__(self)
         self.settings = QSettings("Darkstar007", "networkanalyser")
         if reset:
@@ -262,13 +263,14 @@ class MainWindow(QMainWindow):
             
 	self.file_dir = self.settings.value('spectrum/file_dir', os.getenv('HOME'))
 	print 'File dir', self.file_dir
+	self.dev = dev
 	
         self.setup(start_freq, bandwidth, numpts, max_hold)
         
     def setup(self, start_freq, bandwidth, numpts, max_hold):
         """Setup window parameters"""
         self.setWindowIcon(get_icon('python.png'))
-        self.setWindowTitle(APP_NAME + ' ' + VERS)
+        self.setWindowTitle(APP_NAME + ' ' + VERS + ' Ruuning on ' + self.dev)
         dt = QDesktopWidget()
         print dt.numScreens(), dt.screenGeometry()
         sz = dt.screenGeometry()
@@ -351,7 +353,7 @@ class MainWindow(QMainWindow):
         # Set central widget:
 
         toolbar = self.addToolBar("Image")
-        self.mainwidget = CentralWidget(self, self.settings, toolbar, start_freq, bandwidth, numpts)
+        self.mainwidget = CentralWidget(self, self.settings, toolbar, start_freq, bandwidth, numpts, self.dev)
         self.setCentralWidget(self.mainwidget)
         
         if max_hold:
@@ -395,15 +397,16 @@ def usage():
     print '-b/--bandwidth <freq>       Set the bandwidth'
     print '-n/--numpts <number>        Set the number of points in the sweep'
     print '-m/--max_hold               Turn on max hold'
+    print '-d/--device <device>        Use device <device>, default /dev/ttyUSB0'
     
     return
 
 if __name__ == '__main__':
     from guidata import qapplication
     try:
-        optlist,args = getopt.getopt(sys.argv[1:], 'rs:b:n:m',
+        optlist,args = getopt.getopt(sys.argv[1:], 'rs:b:n:md:',
                                      ['reset', 'start_freq=', 'bandwidth=', 'numpts=',
-                                      'max_hold'])
+                                      'max_hold', 'device='])
     except getopt.GetoptError as err:
         print(err)
         usage()
@@ -414,6 +417,7 @@ if __name__ == '__main__':
     bandwidth = None
     numpts = None
     max_hold = None
+    dev = '/dev/ttyUSB0'
     
     for o,a in optlist:
         if o in ('-r', '--reset'):
@@ -426,11 +430,13 @@ if __name__ == '__main__':
             numpts = int(a)
         elif o in ('-m', '--max_hold'):
             max_hold = True
-            
+	elif o in ('-d', '--device'):
+	    dev = a[:]
+
     app = qapplication()
     window = MainWindow(reset=reset, start_freq=start_freq,
                         bandwidth=bandwidth, numpts=numpts,
-                        max_hold = max_hold)
+                        max_hold = max_hold, dev = dev)
     window.show()
     app.exec_()
 

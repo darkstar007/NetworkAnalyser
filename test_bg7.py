@@ -32,9 +32,10 @@ raw_data['step_size'] = raw_data['bandwidth'] / raw_data['num_samples']
 raw_data['log'] = 'x'
 raw_data['cycle_count'] = 5
 
-raw_data['atten_vals'] = [0, 1, 2, 4, 5, 8, 10, 14, 18, 20, 24, 30]
-raw_data['atten_vals'] = [0, 1, 2, 3, 6, 10, 15, 20, 30]
-raw_data['atten_vals'] = [0, 10, 20, 30]
+raw_data['atten_vals'] = map(int, sys.argv[2:])
+#raw_data['atten_vals'] = [0, 1, 2, 4, 5, 8, 10, 14, 18, 20, 24, 30]
+#raw_data['atten_vals'] = [0, 1, 2, 3, 6, 10, 15, 20, 30]
+#raw_data['atten_vals'] = [0, 10, 20, 30]
 
 raw_data['raw'] = np.zeros((raw_data['num_samples'], len(raw_data['atten_vals'])))
 
@@ -70,7 +71,7 @@ for atten_idx in xrange(len(raw_data['atten_vals'])):
     
 raw_data['raw'] /= float(raw_data['cycle_count'])
 
-fp_save = open('cal_dump.pkl', 'wb')
+fp_save = open(sys.argv[1], 'wb')
 cPickle.dump(raw_data, fp_save)
 fp_save.close()
 

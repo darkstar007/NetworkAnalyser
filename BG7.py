@@ -128,9 +128,10 @@ class BG7(QThread):
             self.data = bytes('')
             self.timer.start()
             self.timeout_timer.start()
-            
+            print 'BG7: started timers & sent commands', self.timer.isActive(), self.timeout_timer.isActive()
+	    
     def check_serial(self):
-        print 'Check', self.fp.inWaiting(), len(self.data), self.restart
+        print 'Check', self.fp.inWaiting(), len(self.data), self.restart, self.timer.isActive(), self.timeout_timer.isActive()
         if self.fp.inWaiting() > 0:
             self.data += self.fp.read(self.fp.inWaiting())
             #print 'Data', len(self.data), hex(ord(self.data[0])), hex(ord(self.data[1])), hex(ord(self.data[2])), hex(ord(self.data[3]))

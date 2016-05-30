@@ -8,6 +8,12 @@ from guidata.qt.QtGui import QMainWindow, QMessageBox, QSplitter, QListWidget, Q
 
 from guidata.qt.QtGui import QFont, QDesktopWidget, QFileDialog, QProgressBar
 from guidata.qt.QtCore import QSettings, QThread, QTimer, QObject
+from guidata.configtools import get_icon
+from guidata.qthelpers import create_action, add_actions, get_std_icon
+from guidata.utils import update_dataset
+from guidata.qt.QtCore import (QSize, QT_VERSION_STR, PYQT_VERSION_STR, Qt,
+                               Signal, pyqtSignal)
+from guiqwt.config import _
 
 import serial
 import sys
@@ -17,9 +23,31 @@ import time
 
 from BG7 import BG7
 
-class Cal(QObject):
+APP_NAME = _("Network Analyser Calibration")
+VERS = '0.0.1'
+
+class Cal(QMainWindow):
     def __init__(self, start_freq, bandwidth, numpts, bg7dev, mdev, max_cycle_count=5, atten_step=2):
-	QObject.__init__(self)
+	QMainWindow.__init__(self)
+
+	self.setWindowIcon(get_icon('python.png'))
+        self.setWindowTitle(APP_NAME + ' ' + VERS + ' Running on ' + bg7dev + ' & ' + mdev)
+        dt = QDesktopWidget()
+        print dt.numScreens(), dt.screenGeometry()
+        sz = dt.screenGeometry()
+
+
+        self.resize(QSize(sz.width()*6/10, 256))
+        
+        # Welcome message in statusbar:
+        status = self.statusBar()
+        status.showMessage(_("Welcome to the NetworkAnalyser Calibration application!"), 5000)
+        
+        self.prog = QProgressBar(self)
+        self.prog.setMaximumHeight(32)
+        self.mainwidget = self.prog
+	self.prog.show()
+	
 	self.bg7 = BG7(start_freq, bandwidth, numpts, sport=bg7dev)
 
 	self.reset_data()
@@ -39,9 +67,10 @@ class Cal(QObject):
 	self.update_atten()
 	
         self.count_data = 0
-
+	self.show()
 	self.bg7.start()
-
+	print 'done BG7 start'
+	
     def reset_data(self):
         self.raw_data = {}
         self.raw_data['Latest'] = {}
@@ -50,7 +79,7 @@ class Cal(QObject):
 	
     def measurement_progress(self, val):
 	print 'progress', val
-        pass
+        self.prog.setValue(int(val))
         
     def measurement_complete(self, data, start_freq, step_size, num_samples):
         print 'cback', start_freq, step_size, num_samples
@@ -75,7 +104,7 @@ class Cal(QObject):
 							       self.raw_data['Latest']['data']) / (self.count_data + 1.0))
             self.count_data += 1
 	    while self.fp_micro.inWaiting() > 0:
-		print self.fp_micro.read()
+	    	print self.fp_micro.read()
 
 	    if self.count_data == self.max_cycle_count:
 		print 'Atten', self.atten_val
@@ -89,6 +118,7 @@ class Cal(QObject):
 		self.count_data = 0
 		
         self.bg7.start()
+	print 'done BG7 start'
 
     def update_atten(self):
 	print 'Setting Atten', self.atten_val
@@ -100,11 +130,10 @@ class Cal(QObject):
 	
 def usage():
     print 'calibrate.py [options]'
-    print '-r/--reset                  Reset the defaults'
+    #print '-r/--reset                  Reset the defaults'
     print '-s/--start_freq <freq>      Set the start frequency'
     print '-b/--bandwidth <freq>       Set the bandwidth'
     print '-n/--numpts <number>        Set the number of points in the sweep'
-    print '-m/--max_hold               Turn on max hold'
     print '-d/--device <device>        Use BG7 device <device>, default /dev/ttyUSB0'
     print '-M/--micro <device>         Use teensy device <device>, default /dev/ttyUSB1'
     return

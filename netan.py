@@ -270,7 +270,7 @@ class MainWindow(QMainWindow):
     def setup(self, start_freq, bandwidth, numpts, max_hold):
         """Setup window parameters"""
         self.setWindowIcon(get_icon('python.png'))
-        self.setWindowTitle(APP_NAME + ' ' + VERS + ' Ruuning on ' + self.dev)
+        self.setWindowTitle(APP_NAME + ' ' + VERS + ' Running on ' + self.dev)
         dt = QDesktopWidget()
         print dt.numScreens(), dt.screenGeometry()
         sz = dt.screenGeometry()

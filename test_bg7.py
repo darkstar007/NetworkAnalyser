@@ -16,8 +16,16 @@ def empty_buffer(bg7_fp):
 	print 'BG7: trying to empty buff', bg7_fp.inWaiting()
     print 'BG7: Finished empty_buffer'
 
+if len(sys.argv) < 2:
+    print 'Usage:   test_bg7.py  <save filename> [<atten val 1> [<atten val 2> [......]]]'
+    sys.exit(1)
+    
+do_var_atten = False
+
 bg7 = serial.Serial('/dev/ttyUSB0', 57600, timeout=4)
-fp_micro = serial.Serial('/dev/ttyACM0', 115200, timeout=4)
+if do_var_atten:
+    fp_micro = serial.Serial('/dev/ttyACM0', 115200, timeout=4)
+    
 time.sleep(4)
 
 empty_buffer(bg7)
@@ -30,9 +38,13 @@ raw_data['num_samples'] = 6000
 raw_data['bandwidth'] = 200e6
 raw_data['step_size'] = raw_data['bandwidth'] / raw_data['num_samples']
 raw_data['log'] = 'x'
-raw_data['cycle_count'] = 5
+raw_data['cycle_count'] = 15
 
-raw_data['atten_vals'] = map(int, sys.argv[2:])
+if do_var_atten:
+    raw_data['atten_vals'] = map(int, sys.argv[2:])
+else:
+    raw_data['atten_vals'] = [53]
+    
 #raw_data['atten_vals'] = [0, 1, 2, 4, 5, 8, 10, 14, 18, 20, 24, 30]
 #raw_data['atten_vals'] = [0, 1, 2, 3, 6, 10, 15, 20, 30]
 #raw_data['atten_vals'] = [0, 10, 20, 30]
@@ -40,14 +52,14 @@ raw_data['atten_vals'] = map(int, sys.argv[2:])
 raw_data['raw'] = np.zeros((raw_data['num_samples'], len(raw_data['atten_vals'])))
 
 for atten_idx in xrange(len(raw_data['atten_vals'])):
+    if do_var_atten:
+	fp_micro.write(str(raw_data['atten_vals'][atten_idx] * 2) + '\n')
+	time.sleep(1)
+	print 'Read micro',
+	while fp_micro.inWaiting() > 0:
+	    print fp_micro.read(),
 
-    fp_micro.write(str(raw_data['atten_vals'][atten_idx] * 2) + '\n')
-    time.sleep(1)
-    print 'Read micro',
-    while fp_micro.inWaiting() > 0:
-	print fp_micro.read(),
-
-    print 'Done read micro'
+	print 'Done read micro'
 
     for count in xrange(raw_data['cycle_count']):
 	bg7.write('\x8f' + raw_data['log'] + format(int(raw_data['start_freq']/10.0), '09')+

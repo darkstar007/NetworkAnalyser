@@ -38,16 +38,16 @@ class BG7(QThread):
         if self.num_samples > 9999:
             raise ValueError('Too many samples requested')
         
-        self.timer = QTimer()
-        self.timer.setInterval(300)
+        #self.timer = QTimer()
+        #self.timer.setInterval(300)
 
-        self.timeout_timer = QTimer()
-        self.timeout_timer.setInterval(5000)
+        #self.timeout_timer = QTimer()
+        #self.timeout_timer.setInterval(5000)
 
         self.data = bytes('')
 
-	self.timer.timeout.connect(self.check_serial)
-	self.timeout_timer.timeout.connect(self.timeout_serial)
+	#self.timer.timeout.connect(self.check_serial)
+	#self.timeout_timer.timeout.connect(self.timeout_serial)
 
         self.fp = None
         self.restart = False
@@ -110,8 +110,41 @@ class BG7(QThread):
 
     def __del__(self):
         self.wait()
-        
+
     def run(self):
+	print 'BG7: Sending command', '\x8f' + self.log + format(int(self.start_freq/10.0), '09')+ format(int(self.step_size/10.0), '08')+ format(int(self.num_samples), '04')
+	self.fp.write('\x8f' + self.log + format(int(self.start_freq/10.0), '09')+
+		      format(int(self.step_size/10.0), '08')+
+		      format(int(self.num_samples), '04'))
+	self.start_time = datetime.datetime.now()
+	self.data = bytes('')
+	time.sleep(1)
+	while self.fp.inWaiting() > 0:
+	    self.data += self.fp.read(self.fp.inWaiting())
+	    print '  so far got', len(self.data)
+            self.measurement_progress.emit(
+		float(len(self.data) * 100.0) / float(4 * self.num_samples))
+	    time.sleep(1)
+	
+	if len(self.data) == 4 * self.num_samples:
+	    diff = datetime.datetime.now() - self.start_time
+	    print 'BG7: Time taken', diff
+	    print 'BG7: Time per sample', diff.total_seconds() / self.num_samples
+	    if self.do_debug:
+		tmp = np.array(struct.unpack('<'+str(self.num_samples*4)+'B', self.data))
+		np.save('raw_dump', tmp)                                   
+                
+	    if not self.restart:
+		self.measurement_complete.emit(
+		    np.array(struct.unpack('<'+str(self.num_samples*2)+'H', self.data)[::2]),
+		    self.start_freq, self.step_size, self.num_samples)
+	    else:
+		self.measurement_complete.emit(None, None, None, None)
+	else:
+	    self.measurement_complete.emit(None, None, None, None)
+	    
+
+    def run_old(self):
         if self.fp != None:
             if self.restart:
                 self.restart = False

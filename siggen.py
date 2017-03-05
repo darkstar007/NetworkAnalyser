@@ -11,8 +11,8 @@
 
 import os
 import os.path as osp
-from PyQt4 import QtGui
-from PyQt4 import QtCore
+from guidata.qt import QtGui
+from guidata.qt import QtCore
 from guidata.qt.QtGui import QMainWindow, QMessageBox, QSplitter, QListWidget, QSpinBox
 
 from guidata.qt.QtGui import QFont, QDesktopWidget, QFileDialog, QProgressBar
@@ -31,11 +31,10 @@ import guiqwt.curve
 from guidata.configtools import get_icon
 from guidata.qthelpers import create_action, add_actions, get_std_icon
 from guidata.utils import update_dataset
-from guidata.qt.QtCore import (QSize, QT_VERSION_STR, PYQT_VERSION_STR, Qt,
-                               SIGNAL)
+from guidata.qt.QtCore import QSize, QT_VERSION_STR, PYQT_VERSION_STR, Qt
+                               
 from guiqwt.config import _
 from guiqwt.plot import ImageWidget
-from guiqwt.signals import SIG_LUT_CHANGED
 
 from guiqwt.plot import ImageDialog
 from guiqwt.builder import make
@@ -60,7 +59,7 @@ class BG7(QThread):
         self.timeout_timer = QTimer()
         self.timeout_timer.setInterval(3000)
 
-        self.connect(self.timeout_timer, QtCore.SIGNAL('timeout()'), self.timeout_serial)        
+        #self.connect(self.timeout_timer, QtCore.SIGNAL('timeout()'), self.timeout_serial)        
         self.fp = None
         self.restart = False
         self.do_debug = False

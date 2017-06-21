@@ -153,15 +153,15 @@ class CentralWidget(QSplitter):
             self.show_data('Mean')
 
             if self.max_hold:
-                if self.raw_data['Max']['data'] == None:
+                if self.raw_data['Max']['data'] is None:
                     self.raw_data['Max']['data'] = self.raw_data['Latest']['data']
                 else:
                     self.raw_data['Max']['data'][:] = np.maximum(self.raw_data['Max']['data'],
-								 self.raw_data['Latest']['data'])
-                self.show_data('Max')
+                                                                 self.raw_data['Latest']['data'])
+                    self.show_data('Max')
 
-	    if 'Cal Data' in self.raw_data.keys():
-		self.show_data('Cal Data')
+            if 'Cal Data' in self.raw_data.keys():
+                self.show_data('Cal Data')
 
         self.bg7.start()
 
@@ -211,13 +211,15 @@ class CentralWidget(QSplitter):
                 self.item[label].set_data(xaxis, np.log10(data))
         else:
             if self.do_log:
-                self.item[label] = make.curve(xaxis, data, color=self.colours[len(self.item) % len(self.colours)], title=label)
+                self.item[label] = make.curve(xaxis, data,
+                                              color=self.colours[len(self.item) % len(self.colours)], title=label)
             else:
-                self.item[label] = make.curve(xaxis, data, color=self.colours[len(self.item) % len(self.colours)], title=label)
+                self.item[label] = make.curve(xaxis, data,
+                                              color=self.colours[len(self.item) % len(self.colours)], title=label)
 
             self.curvewidget.plot.add_item(self.item[label])
             self.curvewidget.plot.set_antialiasing(True)
-            if self.legend == None:
+            if self.legend is None:
                 self.legend = make.legend("TR")
                 self.curvewidget.plot.add_item(self.legend)
 
@@ -253,6 +255,8 @@ class CentralWidget(QSplitter):
 
         # self.settings.setValue('gui/log_lin', new_state)
 
+    def do_new_plot(self):
+        pass
 
 class MainWindow(QMainWindow):
     def __init__(self, reset=False, start_freq=None,
@@ -319,23 +323,30 @@ class MainWindow(QMainWindow):
                                       shortcut="Ctrl+R",
                                       icon=get_std_icon("BrowserReload"),
                                       tip=_("Rescan the current frequency selection"),
-                                      checkable = False,
+                                      checkable=False,
                                       triggered=self.do_scan)
 
         max_hold_action = create_action(self, _("Max Hold"),
                                         shortcut="Ctrl+M",
                                         icon=get_std_icon("ArrowUp"),
                                         tip=_("Display the maximum value encountered"),
-                                        checkable = True,
+                                        checkable=True,
                                         triggered=self.do_max_hold)
 
         log_lin_action = create_action(self, _("Log/Lin"),
                                        shortcut="Ctrl+L",
                                        icon=get_std_icon("ArrowRight"),
                                        tip=_("Use linear power receive mode"),
-                                       checkable = True,
+                                       checkable=True,
                                        triggered=self.do_log_lin)
 
+        new_plot_action = create_action(self, _("New Plot"),
+                                        shortcut="Ctrl+N",
+                                        icon=get_std_icon("ArrowLeft"),
+                                        tip=_("Creates a new labeled plot"),
+                                        checkable=False,
+                                        triggered=self.do_new_plot)
+        
         if max_hold is None:
             max_hold = self.settings.value('gui/max_hold', False)
             print 'Got max_hold', max_hold
@@ -348,7 +359,7 @@ class MainWindow(QMainWindow):
 
         # Calibration action?
         add_actions(main_toolbar, (open_action, load_action, rescan_action,
-                                   max_hold_action, log_lin_action))
+                                   max_hold_action, log_lin_action, new_plot_action))
 
         # Set central widget:
 
@@ -361,6 +372,9 @@ class MainWindow(QMainWindow):
 
     def do_scan(self):
         self.mainwidget.rescan()
+
+    def do_new_plot(self):
+        self.mainwidget.do_new_plot()
 
     def do_max_hold(self):
         self.mainwidget.do_max_hold()

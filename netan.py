@@ -35,6 +35,7 @@ from guidata.qt.QtCore import (QSize, QT_VERSION_STR, PYQT_VERSION_STR, Qt,
                                Signal, pyqtSignal)
 from guiqwt.config import _
 from guiqwt.plot import ImageWidget
+from guiqwt.tools import AnnotatedPointTool
 
 import guiqwt.signals
 
@@ -74,6 +75,7 @@ class CentralWidget(QSplitter):
 
         self.curvewidget.add_toolbar(toolbar, "default")
         self.curvewidget.register_all_image_tools()
+        self.curvewidget.add_tool(AnnotatedPointTool)
 
         self.curvewidget.plot.set_axis_title(BasePlot.X_BOTTOM, 'Frequency')
         self.curvewidget.plot.set_axis_title(BasePlot.Y_LEFT, 'Power')
@@ -102,7 +104,7 @@ class CentralWidget(QSplitter):
         print start_freq, bandwidth, numpts
 
         default_cal_slope = 3.3 / (1024.0 * 16.44e-3)      # 16.44mV/dB, 3.3 V supply to ADC, 10 bit ADC
-        default_cal_icept = -80.0                       # 0 ADC value = -70dBm
+        default_cal_icept = -80.0                       # 0 ADC value = -80dBm
 
         self.cal_slope = self.settings.value('spectrum/cal_slope', default_cal_slope)
         self.cal_icept = self.settings.value('spectrum/cal_icept', default_cal_icept)
@@ -159,8 +161,12 @@ class CentralWidget(QSplitter):
             if self.count_data == 0:
                 self.raw_data['Mean']['data'] = self.raw_data['Latest']['data'] * 1.0
             else:
-                self.raw_data['Mean']['data'] = (((self.raw_data['Mean']['data'] * self.count_data) +
-                                                  self.raw_data['Latest']['data']) / (self.count_data + 1.0))
+                if self.do_log:
+                    self.raw_data['Mean']['data'] = 10.0 * np.log10((((10.0 ** (0.1 * self.raw_data['Mean']['data']) * self.count_data) +
+                                                                      10.0 ** (0.1 * self.raw_data['Latest']['data'])) / (self.count_data + 1.0)))
+                else:
+                    self.raw_data['Mean']['data'] = (((self.raw_data['Mean']['data'] * self.count_data) +
+                                                      self.raw_data['Latest']['data']) / (self.count_data + 1.0))
             self.count_data += 1
 
             self.show_data('Mean')

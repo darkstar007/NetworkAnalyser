@@ -74,7 +74,11 @@ class CentralWidget(QSplitter):
 
         self.curvewidget.add_toolbar(toolbar, "default")
         self.curvewidget.register_all_image_tools()
+
         self.curvewidget.plot.set_axis_title(BasePlot.X_BOTTOM, 'Frequency')
+        self.curvewidget.plot.set_axis_title(BasePlot.Y_LEFT, 'Power')
+
+        self.curvewidget.plot.set_axis_unit(BasePlot.Y_LEFT, 'dBm')
 
         self.addWidget(self.curvewidget)
         self.prog = QProgressBar()
@@ -97,10 +101,19 @@ class CentralWidget(QSplitter):
 
         print start_freq, bandwidth, numpts
 
+        default_cal_slope = 3.3 / (1024.0 * 16.44e-3)      # 16.44mV/dB, 3.3 V supply to ADC, 10 bit ADC
+        default_cal_icept = -80.0                       # 0 ADC value = -70dBm
+
+        self.cal_slope = self.settings.value('spectrum/cal_slope', default_cal_slope)
+        self.cal_icept = self.settings.value('spectrum/cal_icept', default_cal_icept)
+        
         self.settings.setValue('spectrum/start_freq', start_freq)
         self.settings.setValue('spectrum/bandwidth', bandwidth)
         self.settings.setValue('spectrum/num_samps', numpts)
 
+        #self.settings.setValue('spectrum/cal_slope', self.cal_slope)
+        #self.settings.setValue('spectrum/cal_icept', self.cal_icept)
+        
         self.bg7 = BG7(start_freq, bandwidth, numpts, sport=dev)
 
         self.reset_data()
@@ -206,12 +219,12 @@ class CentralWidget(QSplitter):
         print 'dshape', self.dshape
         if label in self.item.keys():
             if self.do_log:
-                self.item[label].set_data(xaxis, data)
+                self.item[label].set_data(xaxis, self.cal_slope * data + self.cal_icept)
             else:
-                self.item[label].set_data(xaxis, np.log10(data))
+                self.item[label].set_data(xaxis, data)
         else:
             if self.do_log:
-                self.item[label] = make.curve(xaxis, data,
+                self.item[label] = make.curve(xaxis, self.cal_slope * data + self.cal_icept,
                                               color=self.colours[len(self.item) % len(self.colours)], title=label)
             else:
                 self.item[label] = make.curve(xaxis, data,
@@ -250,6 +263,11 @@ class CentralWidget(QSplitter):
         self.settings.setValue('gui/max_hold', self.max_hold)
 
     def do_log_lin(self, new_state):
+        if new_state:
+            self.curvewidget.plot.set_axis_unit(BasePlot.Y_LEFT, 'dBm')
+        else:
+            self.curvewidget.plot.set_axis_unit(BasePlot.Y_LEFT, '?')
+
         self.bg7.do_log(new_state)
         self.reset_data()
 

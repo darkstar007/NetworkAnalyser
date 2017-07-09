@@ -104,7 +104,7 @@ class CentralWidget(QSplitter):
         print start_freq, bandwidth, numpts
 
         default_cal_slope = 3.3 / (1024.0 * 16.44e-3)      # 16.44mV/dB, 3.3 V supply to ADC, 10 bit ADC
-        default_cal_icept = -80.0                       # 0 ADC value = -80dBm
+        default_cal_icept = -89.0                       # 0 ADC value = -89dBm
 
         self.cal_slope = self.settings.value('spectrum/cal_slope', default_cal_slope)
         self.cal_icept = self.settings.value('spectrum/cal_icept', default_cal_icept)

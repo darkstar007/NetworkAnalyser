@@ -82,7 +82,7 @@ class BG7(QThread):
         self.run()
         
     def reconnect(self):
-        if self.fp != None:
+        if self.fp is not None:
             try:
                 self.fp.close()
             except Exception, e:
@@ -98,10 +98,15 @@ class BG7(QThread):
         self.wait()
         
     def run(self):
-        if self.fp != None:
+        if self.fp is not None:
             if self.restart:
                 self.restart = False
                 #self.freq = self.freq
+            while self.fp.inWaiting() > 0:
+                pants = self.fp.read(self.fp.inWaiting())
+                time.sleep(1.5)
+                print 'BG7: trying to empty buff', self.fp.inWaiting()
+            print 'BG7: Finished empty_buffer'
                 
             print 'Sending command', self.freq
             self.fp.write('\x8f' + 'f' + format(int(self.freq/10.0), '09'))

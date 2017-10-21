@@ -25,7 +25,7 @@ class BG7(QThread):
     def __init__(self, start_freq, bandwidth, num_samps, sport='/dev/ttyUSB0'):
         QThread.__init__(self)
 
-	
+	self.vers = -1
         self.start_freq = start_freq
 
 	print 'Freq', start_freq
@@ -60,7 +60,10 @@ class BG7(QThread):
             print e
 	    
         self.empty_buffer()
-
+        
+        self.get_version()
+        self.get_status()
+        
     def do_log(self, state):
 	if state:
 	    self.log = 'x'
@@ -111,7 +114,34 @@ class BG7(QThread):
     def __del__(self):
         self.wait()
 
+    def get_status(self):
+        self.fp.write('\x8f' + 's')
+        while self.fp.inWaiting() < 4:
+            time.sleep(0.1)
+        data = self.fp.read(self.fp.inWaiting())
+        if len(data) != 4:
+            print 'Got', len(data), 'bytes back from status command!'
+        if len(data) >= 4:
+            print '   version', ord(data[0])
+            print '   anten', ord(data[1])
+            print '   other', struct.unpack('<1H', data[2:])[0]
+
+    def get_version(self):
+        self.fp.write('\x8f' + 'v')
+        while self.fp.inWaiting() < 1:
+            time.sleep(0.1)
+        self.vers = self.fp.read(self.fp.inWaiting())
+        print 'Got', len(self.vers), 'bytes back fro version command'
+        if len(self.vers) == 1:
+            print 'Firmware version', ord(self.vers)
+        else:
+            print 'Got wrong length of data returned for get_version'
+            
     def run(self):
+        freq = 1.23e9
+        print 'Sending CW command', freq
+        self.fp.write('\x8f' + 'f' + format(int(freq/10.0), '09'))
+	    
 	print 'BG7: Sending command', '\x8f' + self.log + format(int(self.start_freq/10.0), '09')+ format(int(self.step_size/10.0), '08')+ format(int(self.num_samples), '04')
 	self.fp.write('\x8f' + self.log + format(int(self.start_freq/10.0), '09')+
 		      format(int(self.step_size/10.0), '08')+

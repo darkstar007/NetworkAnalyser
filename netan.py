@@ -56,11 +56,11 @@ import getopt
 from BG7 import BG7
 
 APP_NAME = _("Network Analyser")
-VERS = '0.3.0'
+VERS = '0.4.0'
 
 
-class CentralWidget(QSplitter):
-    def __init__(self, parent, settings, toolbar, start_freq, bandwidth, numpts, dev):
+class PlotWidget(QSplitter):
+    def __init__(self, parent, settings, toolbar, start_freq, bandwidth, numpts, dev, lo):
         QSplitter.__init__(self, parent)
         self.setContentsMargins(10, 10, 10, 10)
         self.setOrientation(Qt.Vertical)
@@ -72,7 +72,8 @@ class CentralWidget(QSplitter):
         self.colours = ['b', 'r', 'c', 'y']
         self.legend = None
         self.settings = settings
-
+        self.lo = lo
+        
         self.curvewidget.add_toolbar(toolbar, "default")
         self.curvewidget.register_all_image_tools()
         self.curvewidget.add_tool(AnnotatedPointTool)
@@ -112,6 +113,7 @@ class CentralWidget(QSplitter):
         self.settings.setValue('spectrum/start_freq', start_freq)
         self.settings.setValue('spectrum/bandwidth', bandwidth)
         self.settings.setValue('spectrum/num_samps', numpts)
+        self.settings.setValue('spectrum/offset_freq', lo)
 
         #self.settings.setValue('spectrum/cal_slope', self.cal_slope)
         #self.settings.setValue('spectrum/cal_icept', self.cal_icept)
@@ -145,7 +147,7 @@ class CentralWidget(QSplitter):
                 self.raw_data['Latest']['data'] = data[:] - self.raw_data['Cal Data']['data']
             else:
                 self.raw_data['Latest']['data'] = data[:]
-            self.raw_data['Latest']['freqs'] = (np.arange(num_samples) * step_size) + start_freq
+            self.raw_data['Latest']['freqs'] = (np.arange(num_samples) * step_size) + start_freq + self.lo
             self.raw_data['Latest']['freq_units'] = 'MHz'
             if self.raw_data['Latest']['freqs'][num_samples/2] > 1e9:
                 self.raw_data['Latest']['freqs'] /= 1e9
@@ -285,7 +287,7 @@ class CentralWidget(QSplitter):
 class MainWindow(QMainWindow):
     def __init__(self, reset=False, start_freq=None,
                  bandwidth=None, numpts=None, max_hold=None,
-                 dev='/dev/ttyUSB0'):
+                 dev='/dev/ttyUSB0', offset=0.0):
         QMainWindow.__init__(self)
         self.settings = QSettings("Darkstar007", "networkanalyser")
         if reset:
@@ -294,7 +296,7 @@ class MainWindow(QMainWindow):
         self.file_dir = self.settings.value('spectrum/file_dir', os.getenv('HOME'))
         print 'File dir', self.file_dir
         self.dev = dev
-
+        self.lo = offset
         self.setup(start_freq, bandwidth, numpts, max_hold)
 
     def setup(self, start_freq, bandwidth, numpts, max_hold):
@@ -388,7 +390,8 @@ class MainWindow(QMainWindow):
         # Set central widget:
 
         toolbar = self.addToolBar("Image")
-        self.mainwidget = CentralWidget(self, self.settings, toolbar, start_freq, bandwidth, numpts, self.dev)
+        self.mainwidget = PlotWidget(self, self.settings, toolbar, start_freq, bandwidth,
+                                     numpts, self.dev, self.lo)
         self.setCentralWidget(self.mainwidget)
 
         if max_hold:
@@ -436,16 +439,16 @@ def usage():
     print '-n/--numpts <number>        Set the number of points in the sweep'
     print '-m/--max_hold               Turn on max hold'
     print '-d/--device <device>        Use device <device>, default /dev/ttyUSB0'
-
+    print '-o/--offset <freq>          When displaying graph add on this (LO) freq offset'
     return
 
 
 if __name__ == '__main__':
     from guidata import qapplication
     try:
-        optlist, args = getopt.getopt(sys.argv[1:], 'rs:b:n:md:c:',
+        optlist, args = getopt.getopt(sys.argv[1:], 'rs:b:n:md:c:o:',
                                       ['reset', 'start_freq=', 'bandwidth=', 'numpts=',
-                                       'max_hold', 'device=', 'centre_freq='])
+                                       'max_hold', 'device=', 'centre_freq=', 'offset='])
     except getopt.GetoptError as err:
         print(err)
         usage()
@@ -458,7 +461,8 @@ if __name__ == '__main__':
     max_hold = None
     centre_freq = None
     dev = '/dev/ttyUSB0'
-
+    offset = 0.0
+    
     for o, a in optlist:
         if o in ('-r', '--reset'):
             reset = True
@@ -474,19 +478,21 @@ if __name__ == '__main__':
             max_hold = True
         elif o in ('-d', '--device'):
             dev = a[:]
-
+        elif o in ('-o', '--offset'):
+            offset = float(a)
+            
     if centre_freq is not None and start_freq is not None:
         print 'Only one of start_freq or centre_freq can be set'
         raise ValueError('Invalid option set')
 
     if centre_freq is not None:
         if bandwidth is None:
-            raise ValueError('Need to set a bandwidth is setting the centre freq')            
+            raise ValueError('Need to set a bandwidth if setting the centre freq')            
         else:
             start_freq = centre_freq - bandwidth / 2.0
     app = qapplication()
     window = MainWindow(reset=reset, start_freq=start_freq,
                         bandwidth=bandwidth, numpts=numpts,
-                        max_hold=max_hold, dev=dev)
+                        max_hold=max_hold, dev=dev, offset=offset)
     window.show()
     app.exec_()

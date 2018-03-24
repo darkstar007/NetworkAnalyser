@@ -58,6 +58,37 @@ from BG7 import BG7
 APP_NAME = _("Network Analyser")
 VERS = '0.4.0'
 
+class MarkerAnnotatedPoint(AnnotatedPoint):
+    def __init__(self, x = 0, y = 0, annotationparam=None, manager=None):
+        AnnotatedPoint.__init__(self, x, y, annotationparam)
+        self.manager = manager
+
+        
+    def get_infos(self):
+        xt, yt = self.apply_transform_matrix(*self.shape.points[0])
+        if self.manager != None:
+            #info = self.manager.parent().getPointInfo(xt, yt)
+            info_str = ''
+            #for x in info.keys():
+            #    info_str += x + ': ' + str(info[x]) + '<br>'
+            
+        else:
+            info_str = 'Info:  N/A'
+        if self.manager != None:
+            xtxt = format(xt, '.3f') + self.manager.parent().curvewidget.plot.get_axis_unit(self.xAxis())
+            ytxt = format(yt, '.3f') + self.manager.parent().curvewidget.plot.get_axis_unit(self.yAxis())
+            lab = xtxt + ' ' + ytxt
+        else:
+            lab = 'No graph!'
+        return  lab
+    
+
+class MarkerAnnotatedPointTool(AnnotatedPointTool):
+    def create_shape(self):
+        annotation = MarkerAnnotatedPoint(0, 0, manager=self.manager)
+        self.set_shape_style(annotation)
+        return annotation, 0, 0
+
 
 class PlotWidget(QSplitter):
     def __init__(self, parent, settings, toolbar, start_freq, bandwidth, numpts, dev, lo):
@@ -76,7 +107,7 @@ class PlotWidget(QSplitter):
         
         self.curvewidget.add_toolbar(toolbar, "default")
         self.curvewidget.register_all_image_tools()
-        self.curvewidget.add_tool(AnnotatedPointTool)
+        self.curvewidget.add_tool(MarkerAnnotatedPointTool)
 
         self.curvewidget.plot.set_axis_title(BasePlot.X_BOTTOM, 'Frequency')
         self.curvewidget.plot.set_axis_title(BasePlot.Y_LEFT, 'Power')
@@ -247,7 +278,7 @@ class PlotWidget(QSplitter):
         self.item[label].plot().replot()
 
     def rescan(self):
-        print self.curvewidget.plot.get_axis_limits(BasePlot.X_BOTTOM)
+        print #Rescan', self.curvewidget.plot.get_axis_limits(BasePlot.X_BOTTOM)
         ax = self.curvewidget.plot.get_axis_limits(BasePlot.X_BOTTOM)
         un = self.curvewidget.plot.get_axis_unit(BasePlot.X_BOTTOM)
         if un == 'MHz':

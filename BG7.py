@@ -138,9 +138,15 @@ class BG7(QThread):
             print 'Got wrong length of data returned for get_version'
             
     def run(self):
-        freq = 1.23e9
-        print 'Sending CW command', freq
-        self.fp.write('\x8f' + 'f' + format(int(freq/10.0), '09'))
+        #freq = 1.23e9
+        #print 'Sending CW command', freq
+        #self.fp.write('\x8f' + 'f' + format(int(freq/10.0), '09'))
+        if self.restart:
+            self.restart = False
+            self.start_freq = self.tmp_start_freq
+            self.num_samples = self.tmp_num_samples
+            
+            self.step_size = self.tmp_step_size
 	    
 	print 'BG7: Sending command', '\x8f' + self.log + format(int(self.start_freq/10.0), '09')+ format(int(self.step_size/10.0), '08')+ format(int(self.num_samples), '04')
 	self.fp.write('\x8f' + self.log + format(int(self.start_freq/10.0), '09')+

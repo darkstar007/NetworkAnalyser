@@ -45,15 +45,16 @@ And this is the view of FM stereo broadcast stations:
 ### Commands
 It looks like commands of are the form: `0x8f <command> <arguments>`, where command is:
 
-| Command | Description | Arguments |
-|:-------:|-------------|---------------------------|
-|    x    | Receive in log (power) mode    | `"%09d%08d%04d", frequency, stepSize, numSamples` |
-|    w    | Receive in linear (power) mode | `"%09d%08d%04d", frequency, stepSize, numSamples` |
-|    f    | CW frequency transmission | `"%09d", frequency` |
-|    v    | Get firmware version | No argumens |
-|    r    | ??? | ??? |
-|    m/n  |  ??? | ??? |
-|    s    |  ??? | ??? |
+| Command | Description | Arguments | Returns |
+|:-------:|-------------|---------------------------|------|
+|    x    | Receive in log (power) mode    | `"%09d%08d%04d", frequency, stepSize, numSamples` | Data |
+|    w    | Receive in linear (power) mode | `"%09d%08d%04d", frequency, stepSize, numSamples` | Data |
+|    f    | CW frequency transmission | `"%09d", frequency` | None |
+|    v    | Get firmware version | No argumens | Byte |
+|    r    | Set attenuation level | 2 bytes | None |
+|    m/n  |  ??? | ??? | ??? |
+|    s    | Get the status | No arguments | Version/atten/??? |
+|    e    | Frequency correction | ??? | None |
 
 `frequency` and `stepSize` are in 10Hz steps (i.e. 1000000Hz would be represented by 1000000/10 = 100000).
 

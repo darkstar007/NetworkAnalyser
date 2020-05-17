@@ -3,22 +3,22 @@
 import sys
 import numpy as np
 from matplotlib import pyplot as plt
-import cPickle
+import pickle
 
 fp = open(sys.argv[1], 'rb')
-cal_raw = cPickle.load(fp)
+cal_raw = pickle.load(fp)
 #for att_idx in xrange(len(raw['atten_vals'])):
 #    plt.plot(raw['raw'][:, att_idx], label=f+' '+str(raw['atten_vals'][att_idx]))
 fp.close()
 
 for f in sys.argv[2:]:
     fp = open(f, 'rb')
-    raw_test = cPickle.load(fp)
-    for att_idx in xrange(len(raw_test['atten_vals'])):
+    raw_test = pickle.load(fp)
+    for att_idx in range(len(raw_test['atten_vals'])):
 	vals = []
 	#plt.plot(raw['raw'][:, att_idx], label=f+' '+str(raw['atten_vals'][att_idx]))
-	for x in xrange(raw_test['raw'][:, att_idx].shape[0]):
-	    for cal_att_idx in xrange(len(cal_raw['atten_vals'])-1):
+	for x in range(raw_test['raw'][:, att_idx].shape[0]):
+	    for cal_att_idx in range(len(cal_raw['atten_vals'])-1):
 		if raw_test['raw'][:, att_idx][x] < cal_raw['raw'][:, cal_att_idx][x] and (
 		    raw_test['raw'][:, att_idx][x] > cal_raw['raw'][:, cal_att_idx+1][x]):
 

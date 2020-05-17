@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 #
 # This code is licenced under the GPL version 2, a copy of which is attached
@@ -45,7 +45,7 @@ from guiqwt.builder import make
 import numpy as np
 import sys
 import platform
-import cPickle
+import pickle
 
 import serial
 import struct
@@ -91,7 +91,7 @@ class MarkerAnnotatedPointTool(AnnotatedPointTool):
 
 
 class PlotWidget(QSplitter):
-    def __init__(self, parent, settings, toolbar, start_freq, bandwidth, numpts, dev, lo):
+    def __init__(self, parent, settings, toolbar, start_freq, bandwidth, numpts, dev, lo, atten):
         QSplitter.__init__(self, parent)
         self.setContentsMargins(10, 10, 10, 10)
         self.setOrientation(Qt.Vertical)
@@ -104,6 +104,8 @@ class PlotWidget(QSplitter):
         self.legend = None
         self.settings = settings
         self.lo = lo
+        self.atten = atten
+        print('pw', self.atten)
         
         self.curvewidget.add_toolbar(toolbar, "default")
         self.curvewidget.register_all_image_tools()
@@ -133,7 +135,7 @@ class PlotWidget(QSplitter):
         if numpts is None:
             numpts = int(self.settings.value('spectrum/num_samps', 6000))
 
-        print start_freq, bandwidth, numpts
+        print(start_freq, bandwidth, numpts, self.atten)
 
         default_cal_slope = 3.3 / (1024.0 * 16.44e-3)      # 16.44mV/dB, 3.3 V supply to ADC, 10 bit ADC
         default_cal_icept = -89.0                       # 0 ADC value = -89dBm
@@ -148,8 +150,9 @@ class PlotWidget(QSplitter):
 
         #self.settings.setValue('spectrum/cal_slope', self.cal_slope)
         #self.settings.setValue('spectrum/cal_icept', self.cal_icept)
+        print('Atten =', self.atten)
         
-        self.bg7 = BG7(start_freq, bandwidth, numpts, sport=dev)
+        self.bg7 = BG7(start_freq, bandwidth, numpts, self.atten, sport=dev)
 
         self.reset_data()
 
@@ -171,16 +174,16 @@ class PlotWidget(QSplitter):
         self.prog.setValue(int(val))
 
     def measurement_complete(self, data, start_freq, step_size, num_samples):
-        print 'cback', start_freq, step_size
+        print('cback', start_freq, step_size)
         # data, start_freq, step_size, num_samples = cback_data
         if data is not None:
-            if 'Cal Data' in self.raw_data.keys():
-                self.raw_data['Latest']['data'] = data[:] - self.raw_data['Cal Data']['data']
+            if 'Cal Data' in list(self.raw_data.keys()):
+                self.raw_data['Latest']['data'] = data[:] - self.raw_data['Cal Data']['data'] #+ self.atten
             else:
-                self.raw_data['Latest']['data'] = data[:]
+                self.raw_data['Latest']['data'] = data[:] #+ self.atten
             self.raw_data['Latest']['freqs'] = (np.arange(num_samples) * step_size) + start_freq + self.lo
             self.raw_data['Latest']['freq_units'] = 'MHz'
-            if self.raw_data['Latest']['freqs'][num_samples/2] > 1e9:
+            if self.raw_data['Latest']['freqs'][int(num_samples/2)] > 1e9:
                 self.raw_data['Latest']['freqs'] /= 1e9
                 self.raw_data['Latest']['freq_units'] = 'GHz'
             else:
@@ -212,20 +215,20 @@ class PlotWidget(QSplitter):
                                                                  self.raw_data['Latest']['data'])
                     self.show_data('Max')
 
-            if 'Cal Data' in self.raw_data.keys():
+            if 'Cal Data' in list(self.raw_data.keys()):
                 self.show_data('Cal Data')
 
         self.bg7.start()
 
     def save_cal_data(self, fname):
         fp = open(fname, 'wb')
-        cPickle.dump(self.raw_data, fp)
+        pickle.dump(self.raw_data, fp)
         fp.close()
         self.settings.setValue('spectrum/file_dir', os.path.dirname(fname))
 
     def load_cal_data(self, fname):
         fp = open(fname, 'rb')
-        cal_data = cPickle.load(fp)
+        cal_data = pickle.load(fp)
         # Add some checks to make sure cal data is valid for our current setup
         self.raw_data['Cal Data'] = {}
         self.raw_data['Cal Data']['data'] = cal_data['Mean']['data'][:]
@@ -238,7 +241,7 @@ class PlotWidget(QSplitter):
     def show_data(self, label):
         data = self.raw_data[label]['data']
         xaxis = self.raw_data['Latest']['freqs']
-        print 'xmin', np.min(xaxis), np.max(xaxis)
+        print('xmin', np.min(xaxis), np.max(xaxis))
 
         self.dshape = data.shape[0]
 
@@ -246,7 +249,7 @@ class PlotWidget(QSplitter):
         if vals > 4:
             fact = 10**int(vals - 4)
             n = int(data.shape[0] / fact)
-            print 'Factor', fact,'N', n
+            print('Factor', fact,'N', n)
 
             s = data[0:n*fact].reshape(n, fact)
             data = np.mean(s, axis=1)
@@ -254,9 +257,9 @@ class PlotWidget(QSplitter):
             s = xaxis[0:n*fact].reshape(n, fact)
             xaxis = np.mean(s, axis=1)
 
-        print 'Min', np.min(data), 'Max', np.max(data), data.shape
-        print 'dshape', self.dshape
-        if label in self.item.keys():
+        print('Min', np.min(data), 'Max', np.max(data), data.shape)
+        print('dshape', self.dshape)
+        if label in list(self.item.keys()):
             if self.do_log:
                 self.item[label].set_data(xaxis, self.cal_slope * data + self.cal_icept)
             else:
@@ -278,7 +281,7 @@ class PlotWidget(QSplitter):
         self.item[label].plot().replot()
 
     def rescan(self):
-        print #Rescan', self.curvewidget.plot.get_axis_limits(BasePlot.X_BOTTOM)
+        print('Rescan', self.curvewidget.plot.get_axis_limits(BasePlot.X_BOTTOM))
         ax = self.curvewidget.plot.get_axis_limits(BasePlot.X_BOTTOM)
         un = self.curvewidget.plot.get_axis_unit(BasePlot.X_BOTTOM)
         if un == 'MHz':
@@ -317,7 +320,7 @@ class PlotWidget(QSplitter):
 
 class MainWindow(QMainWindow):
     def __init__(self, reset=False, start_freq=None,
-                 bandwidth=None, numpts=None, max_hold=None,
+                 bandwidth=None, numpts=None, max_hold=None, atten=0,
                  dev='/dev/ttyUSB0', offset=0.0):
         QMainWindow.__init__(self)
         self.settings = QSettings("Darkstar007", "networkanalyser")
@@ -325,20 +328,20 @@ class MainWindow(QMainWindow):
             self.settings.clear()
 
         self.file_dir = self.settings.value('spectrum/file_dir', os.getenv('HOME'))
-        print 'File dir', self.file_dir
+        print('File dir', self.file_dir)
         self.dev = dev
         self.lo = offset
-        self.setup(start_freq, bandwidth, numpts, max_hold)
+        self.setup(start_freq, bandwidth, numpts, max_hold, atten)
 
-    def setup(self, start_freq, bandwidth, numpts, max_hold):
+    def setup(self, start_freq, bandwidth, numpts, max_hold, atten):
         """Setup window parameters"""
         self.setWindowIcon(get_icon('python.png'))
         self.setWindowTitle(APP_NAME + ' ' + VERS + ' Running on ' + self.dev)
         dt = QDesktopWidget()
-        print dt.numScreens(), dt.screenGeometry()
+        #print(dt.numScreens(), dt.screenGeometry())
         sz = dt.screenGeometry()
 
-        self.resize(QSize(sz.width()*9/10, sz.height()*9/10))
+        self.resize(QSize(int(sz.width()*9/10), int(sz.height()*9/10)))
 
         # Welcome message in statusbar:
         status = self.statusBar()
@@ -406,7 +409,7 @@ class MainWindow(QMainWindow):
         
         if max_hold is None:
             max_hold = self.settings.value('gui/max_hold', False)
-            print 'Got max_hold', max_hold
+            print('Got max_hold', max_hold)
             if type(max_hold) != bool:
                 if max_hold in ['y', 'Y', 'T', 'True', 'true', '1']:
                     max_hold = True
@@ -422,7 +425,7 @@ class MainWindow(QMainWindow):
 
         toolbar = self.addToolBar("Image")
         self.mainwidget = PlotWidget(self, self.settings, toolbar, start_freq, bandwidth,
-                                     numpts, self.dev, self.lo)
+                                     numpts, self.dev, self.lo, atten)
         self.setCentralWidget(self.mainwidget)
 
         if max_hold:
@@ -441,15 +444,15 @@ class MainWindow(QMainWindow):
         self.mainwidget.do_log_lin()
 
     def saveFileDialog(self):
-        print 'Save f dialog'
+        print('Save f dialog')
         fileName = QFileDialog.getSaveFileName(self, _("Save Cal Data"), self.file_dir)
-        print fileName
+        print(fileName)
         self.mainwidget.save_cal_data(fileName)
 
     def loadFileDialog(self):
-        print 'load f dialog'
+        print('load f dialog')
         fileName = QFileDialog.getOpenFileName(self, _("Open Cal Data"), self.file_dir)
-        print fileName
+        print(fileName)
         self.mainwidget.load_cal_data(fileName)
 
     def about(self):
@@ -462,24 +465,26 @@ class MainWindow(QMainWindow):
 
 
 def usage():
-    print 'netan.py [options]'
-    print '-r/--reset                  Reset the defaults'
-    print '-s/--start_freq <freq>      Set the start frequency (mut excl to centre_freq option)'
-    print '-c/--centre_freq <freq>     Set the centre frequency (mut excl to start_freq option)'
-    print '-b/--bandwidth <freq>       Set the bandwidth'
-    print '-n/--numpts <number>        Set the number of points in the sweep'
-    print '-m/--max_hold               Turn on max hold'
-    print '-d/--device <device>        Use device <device>, default /dev/ttyUSB0'
-    print '-o/--offset <freq>          When displaying graph add on this (LO) freq offset'
+    print('netan.py [options]')
+    print('-r/--reset                  Reset the defaults')
+    print('-s/--start_freq <freq>      Set the start frequency (mut excl to centre_freq option)')
+    print('-c/--centre_freq <freq>     Set the centre frequency (mut excl to start_freq option)')
+    print('-b/--bandwidth <freq>       Set the bandwidth')
+    print('-n/--numpts <number>        Set the number of points in the sweep')
+    print('-m/--max_hold               Turn on max hold')
+    print('-d/--device <device>        Use device <device>, default /dev/ttyUSB0')
+    print('-o/--offset <freq>          When displaying graph add on this (LO) freq offset')
+    print('-a/--atten <value>          Set the attenuator value to this')
     return
 
 
 if __name__ == '__main__':
     from guidata import qapplication
     try:
-        optlist, args = getopt.getopt(sys.argv[1:], 'rs:b:n:md:c:o:',
+        optlist, args = getopt.getopt(sys.argv[1:], 'rs:b:n:md:c:o:a:',
                                       ['reset', 'start_freq=', 'bandwidth=', 'numpts=',
-                                       'max_hold', 'device=', 'centre_freq=', 'offset='])
+                                       'max_hold', 'device=', 'centre_freq=', 'offset=',
+                                       'atten='])
     except getopt.GetoptError as err:
         print(err)
         usage()
@@ -491,6 +496,7 @@ if __name__ == '__main__':
     numpts = None
     max_hold = None
     centre_freq = None
+    atten = 0
     dev = '/dev/ttyUSB0'
     offset = 0.0
     
@@ -511,9 +517,12 @@ if __name__ == '__main__':
             dev = a[:]
         elif o in ('-o', '--offset'):
             offset = float(a)
-            
+        elif o in ('-a', '--atten'):
+            atten = int(a)
+
+    print('atten top level', atten)
     if centre_freq is not None and start_freq is not None:
-        print 'Only one of start_freq or centre_freq can be set'
+        print('Only one of start_freq or centre_freq can be set')
         raise ValueError('Invalid option set')
 
     if centre_freq is not None:
@@ -524,6 +533,7 @@ if __name__ == '__main__':
     app = qapplication()
     window = MainWindow(reset=reset, start_freq=start_freq,
                         bandwidth=bandwidth, numpts=numpts,
-                        max_hold=max_hold, dev=dev, offset=offset)
+                        max_hold=max_hold, dev=dev, atten=atten,
+                        offset=offset)
     window.show()
     app.exec_()

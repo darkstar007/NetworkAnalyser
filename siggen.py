@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 #
 # This code is licenced under the GPL version 2, a copy of which is attached
@@ -67,8 +67,8 @@ class BG7(QThread):
         self.sport = sport
         try:
             self.reconnect()
-        except Exception, e:
-            print e
+        except Exception as e:
+            print(e)
 	    
         self.empty_buffer()
 
@@ -76,7 +76,7 @@ class BG7(QThread):
         pass
     
     def timeout_serial(self):
-        print 'Timeout serial'
+        print('Timeout serial')
         self.timeout_timer.stop()
         self.reconnect()
         self.run()
@@ -85,13 +85,13 @@ class BG7(QThread):
         if self.fp is not None:
             try:
                 self.fp.close()
-            except Exception, e:
-                print e
+            except Exception as e:
+                print(e)
 
         try:
             self.fp = serial.Serial(self.sport, 57600, timeout=4)
-        except Exception, e:
-            print e
+        except Exception as e:
+            print(e)
             raise e
 
     def __del__(self):
@@ -105,14 +105,14 @@ class BG7(QThread):
             while self.fp.inWaiting() > 0:
                 pants = self.fp.read(self.fp.inWaiting())
                 time.sleep(1.5)
-                print 'BG7: trying to empty buff', self.fp.inWaiting()
-            print 'BG7: Finished empty_buffer'
-                
-            print 'Sending command', self.freq
-            self.fp.write('\x8f' + 'f' + format(int(self.freq/10.0), '09'))
-	    
+                print('BG7: trying to empty buff', self.fp.inWaiting())
+            print('BG7: Finished empty_buffer')
 
-        
+            print('Sending command', self.freq)
+            self.fp.write('\x8f' + 'f' + format(int(self.freq/10.0), '09'))
+
+
+
 class MainWindow(QMainWindow):
     def __init__(self, reset=False, start_freq=None,
                         bandwidth=None, numpts=None, max_hold=None):
@@ -186,9 +186,9 @@ class MainWindow(QMainWindow):
 import getopt
 
 def usage():
-    print 'siggen.py [options]'
-    print '-r/--reset                  Reset the defaults'
-    print '-f/--freq <freq>            Set the frequency'
+    print('siggen.py [options]')
+    print('-r/--reset                  Reset the defaults')
+    print('-f/--freq <freq>            Set the frequency')
     
     return
 

@@ -5,7 +5,7 @@ import sys
 
 from matplotlib import pyplot as plt
 
-import cPickle
+import pickle
 
 #fig = plt.figure()
 
@@ -23,7 +23,7 @@ default_cal_icept = -89.0                       # 0 ADC value = -80dBm
 baseline = None
 for f in sys.argv[1:]:
     fp = open(f, 'rb')
-    data = cPickle.load(fp)
+    data = pickle.load(fp)
     fp.close()
     if baseline is None:
         baseline = data['Mean']['data'] * default_cal_slope + default_cal_icept

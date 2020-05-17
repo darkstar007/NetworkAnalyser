@@ -5,7 +5,7 @@ import sys
 
 from matplotlib import pyplot as plt
 
-import cPickle
+import pickle
 
 ax = plt.axes()
 default_cal_slope = 3.3 / (1024.0 * 16.44e-3)      # 16.44mV/dB, 3.3 V supply to ADC, 10 bit ADC
@@ -17,7 +17,7 @@ default_cal_icept = -80.0                       # 0 ADC value = -80dBm
 baseline = None
 for f in sys.argv[1:]:
     fp = open(f, 'rb')
-    data = cPickle.load(fp)
+    data = pickle.load(fp)
     fp.close()
     if baseline is None:
         baseline = data['Mean']['data'] * default_cal_slope + default_cal_icept

@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 import os
 import os.path as osp
@@ -33,7 +33,7 @@ class Cal(QMainWindow):
 	self.setWindowIcon(get_icon('python.png'))
         self.setWindowTitle(APP_NAME + ' ' + VERS + ' Running on ' + bg7dev + ' & ' + mdev)
         dt = QDesktopWidget()
-        print dt.numScreens(), dt.screenGeometry()
+        print(dt.numScreens(), dt.screenGeometry())
         sz = dt.screenGeometry()
 
 
@@ -69,7 +69,7 @@ class Cal(QMainWindow):
         self.count_data = 0
 	self.show()
 	self.bg7.start()
-	print 'done BG7 start'
+	print('done BG7 start')
 	
     def reset_data(self):
         self.raw_data = {}
@@ -78,14 +78,14 @@ class Cal(QMainWindow):
         self.raw_data['Logged'] = self.bg7.log_mode
 	
     def measurement_progress(self, val):
-	print 'progress', val
+	print('progress', val)
         self.prog.setValue(int(val))
         
     def measurement_complete(self, data, start_freq, step_size, num_samples):
-        print 'cback', start_freq, step_size, num_samples
+        print('cback', start_freq, step_size, num_samples)
         #data, start_freq, step_size, num_samples = cback_data
         if data is not None:
-	    if 'Cal Data' in self.raw_data.keys():
+	    if 'Cal Data' in list(self.raw_data.keys()):
 		self.raw_data['Latest']['data'] = data[:] - self.raw_data['Cal Data']['data']
 	    else:
 		self.raw_data['Latest']['data'] = data[:]
@@ -104,10 +104,10 @@ class Cal(QMainWindow):
 							       self.raw_data['Latest']['data']) / (self.count_data + 1.0))
             self.count_data += 1
 	    while self.fp_micro.inWaiting() > 0:
-	    	print self.fp_micro.read()
+	    	print(self.fp_micro.read())
 
 	    if self.count_data == self.max_cycle_count:
-		print 'Atten', self.atten_val
+		print('Atten', self.atten_val)
 		self.atten_val += self.atten_step
 		if self.atten_val > self.max_atten_val:
 		    fp = open(self.fname, 'wb')
@@ -118,24 +118,24 @@ class Cal(QMainWindow):
 		self.count_data = 0
 		
         self.bg7.start()
-	print 'done BG7 start'
+	print('done BG7 start')
 
     def update_atten(self):
-	print 'Setting Atten', self.atten_val
+	print('Setting Atten', self.atten_val)
 	self.fp_micro.write(str(self.atten_val) + '\n')
 	time.sleep(1)
 	while self.fp_micro.inWaiting() > 0:
-	    print 'Read micro', self.fp_micro.read()
-	print 'Done'
+	    print('Read micro', self.fp_micro.read())
+	print('Done')
 	
 def usage():
-    print 'calibrate.py [options]'
+    print('calibrate.py [options]')
     #print '-r/--reset                  Reset the defaults'
-    print '-s/--start_freq <freq>      Set the start frequency'
-    print '-b/--bandwidth <freq>       Set the bandwidth'
-    print '-n/--numpts <number>        Set the number of points in the sweep'
-    print '-d/--device <device>        Use BG7 device <device>, default /dev/ttyUSB0'
-    print '-M/--micro <device>         Use teensy device <device>, default /dev/ttyUSB1'
+    print('-s/--start_freq <freq>      Set the start frequency')
+    print('-b/--bandwidth <freq>       Set the bandwidth')
+    print('-n/--numpts <number>        Set the number of points in the sweep')
+    print('-d/--device <device>        Use BG7 device <device>, default /dev/ttyUSB0')
+    print('-M/--micro <device>         Use teensy device <device>, default /dev/ttyUSB1')
     return
 
 if __name__ == '__main__':

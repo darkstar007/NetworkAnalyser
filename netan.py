@@ -10,54 +10,78 @@
 #
 
 import os
-import os.path as osp
-from guidata.qt import QtGui
-from guidata.qt import QtCore
-from guidata.qt.QtGui import QMainWindow, QMessageBox, QSplitter, QListWidget, QSpinBox
-
-from guidata.qt.QtGui import QFont, QDesktopWidget, QFileDialog, QProgressBar
-from guidata.qt.QtCore import QSettings, QThread, QTimer, QObject
-
-from guiqwt.plot import CurveDialog, CurveWidget, BasePlot
-from guiqwt.builder import make
-from guiqwt.image import ImageItem
-from guiqwt.styles import ImageParam
-from guiqwt.annotations import AnnotatedPoint
-from guiqwt.shapes import PointShape, Marker
-from guiqwt.styles import AnnotationParam, ShapeParam, SymbolParam
-import guidata
-
-import guiqwt.curve
-from guidata.configtools import get_icon
-from guidata.qthelpers import create_action, add_actions, get_std_icon
-from guidata.utils import update_dataset
-from guidata.qt.QtCore import (QSize, QT_VERSION_STR, PYQT_VERSION_STR, Qt,
-                               Signal, pyqtSignal)
-from guiqwt.config import _
-from guiqwt.plot import ImageWidget
-from guiqwt.tools import AnnotatedPointTool
-
-import guiqwt.signals
-
-from guiqwt.plot import ImageDialog
-from guiqwt.builder import make
-
-import numpy as np
 import sys
 import platform
 import pickle
 
-import serial
 import struct
 import datetime
 import time
 import getopt
 
+import serial
+import numpy as np
+
+try:
+    import PyQt5
+    from PyQt5.QtWidgets import QSplitter, QApplication, QMainWindow, QDesktopWidget, QFileDialog, QStyle, QAction, QProgressBar
+    from PyQt5.QtCore import QSettings, QSize, Qt, QLocale
+    from PyQt5.QtGui import QGuiApplication
+except ImportError:
+    import PySide
+    from PySide.QtCore import QSettings, QSize, Qt, QLocale
+    from PySide.QtGui import QSplitter, QApplication, QMainWindow, QDesktopWidget, QFileDialog, QMessageBox
+
+import pyqtgraph as pg
+
 from BG7 import BG7
 
-APP_NAME = _("Network Analyser")
+APP_NAME = "Network Analyser"
 VERS = '0.4.0'
 
+def get_std_icon(parent, name):
+    return parent.style().standardIcon(getattr(QStyle, 'SP_' + name))
+
+def create_action(parent, name,
+                  shortcut=None,
+                  icon=None,
+                  tip=None,
+                  triggered=None,
+                  checkable=False):
+
+    butt = None
+
+    if icon is not None:
+        butt = QAction(icon, name, parent)
+    else:
+        butt = QAction(name, parent)
+
+    if shortcut is not None:
+        butt.setShortcut(shortcut)
+
+    if tip is not None:
+        butt.setStatusTip(tip)
+
+    if checkable:
+        butt.setCheckable(True)
+
+    if triggered is not None:
+        butt.triggered.connect(triggered)
+
+    return butt
+
+def add_actions(parent, action_list):
+
+    for a in action_list:
+        if a is None:
+            parent.addSeparator()
+        else:
+            parent.addAction(a)
+
+class AnnotatedPoint():
+    def __init__(self, x,y,param):
+        pass
+    
 class MarkerAnnotatedPoint(AnnotatedPoint):
     def __init__(self, x = 0, y = 0, annotationparam=None, manager=None):
         AnnotatedPoint.__init__(self, x, y, annotationparam)
@@ -82,6 +106,9 @@ class MarkerAnnotatedPoint(AnnotatedPoint):
             lab = 'No graph!'
         return  lab
     
+class AnnotatedPointTool():
+    def __init__(self):
+        pass
 
 class MarkerAnnotatedPointTool(AnnotatedPointTool):
     def create_shape(self):
@@ -95,7 +122,6 @@ class PlotWidget(QSplitter):
         QSplitter.__init__(self, parent)
         self.setContentsMargins(10, 10, 10, 10)
         self.setOrientation(Qt.Vertical)
-        self.curvewidget = CurveWidget(self)
         self.item = {}
         self.points = []
         self.max_hold = False
@@ -106,17 +132,19 @@ class PlotWidget(QSplitter):
         self.lo = lo
         self.atten = atten
         print('pw', self.atten)
-        
-        self.curvewidget.add_toolbar(toolbar, "default")
-        self.curvewidget.register_all_image_tools()
-        self.curvewidget.add_tool(MarkerAnnotatedPointTool)
+        self.glw = pg.GraphicsLayoutWidget()
+        self.curvewidget = self.glw.addPlot()
+        self.curvewidget.showGrid(x=True, y=True, alpha=0.7)
+        #self.curvewidget.add_toolbar(toolbar, "default")
+        #self.curvewidget.register_all_image_tools()
+        #self.curvewidget.add_tool(MarkerAnnotatedPointTool)
 
-        self.curvewidget.plot.set_axis_title(BasePlot.X_BOTTOM, 'Frequency')
-        self.curvewidget.plot.set_axis_title(BasePlot.Y_LEFT, 'Power')
+        #self.curvewidget.plot.set_axis_title(BasePlot.X_BOTTOM, 'Frequency')
+        #self.curvewidget.plot.set_axis_title(BasePlot.Y_LEFT, 'Power')
 
-        self.curvewidget.plot.set_axis_unit(BasePlot.Y_LEFT, 'dBm')
+        #self.curvewidget.plot.set_axis_unit(BasePlot.Y_LEFT, 'dBm')
 
-        self.addWidget(self.curvewidget)
+        self.addWidget(self.glw)
         self.prog = QProgressBar()
         self.prog.setMaximumHeight(32)
         self.addWidget(self.prog)
@@ -182,16 +210,16 @@ class PlotWidget(QSplitter):
             else:
                 self.raw_data['Latest']['data'] = data[:] #+ self.atten
             self.raw_data['Latest']['freqs'] = (np.arange(num_samples) * step_size) + start_freq + self.lo
-            self.raw_data['Latest']['freq_units'] = 'MHz'
-            if self.raw_data['Latest']['freqs'][int(num_samples/2)] > 1e9:
-                self.raw_data['Latest']['freqs'] /= 1e9
-                self.raw_data['Latest']['freq_units'] = 'GHz'
-            else:
-                self.raw_data['Latest']['freqs'] /= 1e6
-
-            self.curvewidget.plot.set_axis_unit(BasePlot.X_BOTTOM,
-                                                self.raw_data['Latest']['freq_units'])
-
+            #self.raw_data['Latest']['freq_units'] = 'MHz'
+            #if self.raw_data['Latest']['freqs'][int(num_samples/2)] > 1e9:
+            #    self.raw_data['Latest']['freqs'] /= 1e9
+            #    self.raw_data['Latest']['freq_units'] = 'GHz'
+            #else:
+            #    self.raw_data['Latest']['freqs'] /= 1e6
+                
+            #self.curvewidget.plot.set_axis_unit(BasePlot.X_BOTTOM,
+            #                                    self.raw_data['Latest']['freq_units'])
+            self.curvewidget.setLabel('bottom', text='Frequency', units='Hz') #self.raw_data['Latest']['freq_units'])
             self.show_data('Latest')
 
             if self.count_data == 0:
@@ -261,24 +289,31 @@ class PlotWidget(QSplitter):
         print('dshape', self.dshape)
         if label in list(self.item.keys()):
             if self.do_log:
-                self.item[label].set_data(xaxis, self.cal_slope * data + self.cal_icept)
+                self.item[label].setData(xaxis, self.cal_slope * data + self.cal_icept)
             else:
-                self.item[label].set_data(xaxis, data)
+                self.item[label].setData(xaxis, data)
         else:
             if self.do_log:
-                self.item[label] = make.curve(xaxis, self.cal_slope * data + self.cal_icept,
-                                              color=self.colours[len(self.item) % len(self.colours)], title=label)
+                self.item[label] = self.curvewidget.plot(xaxis, self.cal_slope * data + self.cal_icept,
+                                                         color=self.colours[len(self.item) % len(self.colours)],
+                                                         antialias=True, symbol='o', symbolSize=4,
+                                                         symbolPen=self.colours[(len(self.item)) % len(self.colours)],
+                                                         name=label, clickable=True)
             else:
-                self.item[label] = make.curve(xaxis, data,
-                                              color=self.colours[len(self.item) % len(self.colours)], title=label)
+                self.item[label] = self.curvewidget.plot(xaxis, data,
+                                                         color=self.colours[len(self.item) % len(self.colours)],
+                                                         antialias=True, symbol='o', symbolSize=4,
+                                                         symbolPen=self.colours[(len(self.item)) % len(self.colours)],
+                                                         name=label, clickable=True)
+            #self.item[label].sigClicked.connect(self.plot_selected)
 
-            self.curvewidget.plot.add_item(self.item[label])
-            self.curvewidget.plot.set_antialiasing(True)
-            if self.legend is None:
-                self.legend = make.legend("TR")
-                self.curvewidget.plot.add_item(self.legend)
+            #self.curvewidget.plot.add_item(self.item[label])
+            #self.curvewidget.plot.set_antialiasing(True)
+            #if self.legend is None:
+            #    self.legend = make.legend("TR")
+            #    self.curvewidget.plot.add_item(self.legend)
 
-        self.item[label].plot().replot()
+        #self.item[label].plot().replot()
 
     def rescan(self):
         print('Rescan', self.curvewidget.plot.get_axis_limits(BasePlot.X_BOTTOM))
@@ -335,75 +370,82 @@ class MainWindow(QMainWindow):
 
     def setup(self, start_freq, bandwidth, numpts, max_hold, atten):
         """Setup window parameters"""
-        self.setWindowIcon(get_icon('python.png'))
+        #self.setWindowIcon(get_icon('python.png'))
         self.setWindowTitle(APP_NAME + ' ' + VERS + ' Running on ' + self.dev)
-        dt = QDesktopWidget()
-        #print(dt.numScreens(), dt.screenGeometry())
-        sz = dt.screenGeometry()
+
+        # Work around Qt4/Qt5 moving classes around and their function
+        try:
+            screens = QGuiApplication.screens()
+            print(len(screens), screens[0])
+            sz = screens[0].availableGeometry()
+        except NameError:
+            dt = QDesktopWidget()
+            print(dt.numScreens(), dt.screenGeometry())
+            sz = dt.screenGeometry()
 
         self.resize(QSize(int(sz.width()*9/10), int(sz.height()*9/10)))
 
         # Welcome message in statusbar:
         status = self.statusBar()
-        status.showMessage(_("Welcome to the NetworkAnalyser application!"), 5000)
+        status.showMessage("Welcome to the NetworkAnalyser application!", 5000)
 
         # File menu
-        file_menu = self.menuBar().addMenu(_("File"))
+        file_menu = self.menuBar().addMenu("File")
 
-        open_action = create_action(self, _("Save"),
+        open_action = create_action(self, "Save",
                                     shortcut="Ctrl+S",
-                                    icon=get_std_icon("DialogSaveButton"),
-                                    tip=_("Save a Cal File"),
+                                    icon=get_std_icon(self, "DialogSaveButton"),
+                                    tip="Save a Cal File",
                                     triggered=self.saveFileDialog)
 
-        load_action = create_action(self, _("Load"),
+        load_action = create_action(self, "Load",
                                     shortcut="Ctrl+L",
-                                    icon=get_std_icon("FileIcon"),
-                                    tip=_("Load a cal File"),
+                                    icon=get_std_icon(self, "FileIcon"),
+                                    tip="Load a cal File",
                                     triggered=self.loadFileDialog)
 
-        quit_action = create_action(self, _("Quit"),
+        quit_action = create_action(self, "Quit",
                                     shortcut="Ctrl+Q",
-                                    icon=get_std_icon("DialogCloseButton"),
-                                    tip=_("Quit application"),
+                                    icon=get_std_icon(self, "DialogCloseButton"),
+                                    tip="Quit application",
                                     triggered=self.close)
         add_actions(file_menu, (open_action, load_action, None, quit_action))
 
         # Help menu - prolly should just say "you're on your own..."!!
         help_menu = self.menuBar().addMenu("Help")
-        about_action = create_action(self, _("About..."),
-                                     icon=get_std_icon('MessageBoxInformation'),
+        about_action = create_action(self, "About...",
+                                     icon=get_std_icon(self, 'MessageBoxInformation'),
                                      triggered=self.about)
         add_actions(help_menu, (about_action,))
 
         main_toolbar = self.addToolBar("Main")
         # add_actions(main_toolbar, (new_action, open_action, ))
 
-        rescan_action = create_action(self, _("Rescan"),
+        rescan_action = create_action(self, "Rescan",
                                       shortcut="Ctrl+R",
-                                      icon=get_std_icon("BrowserReload"),
-                                      tip=_("Rescan the current frequency selection"),
+                                      icon=get_std_icon(self, "BrowserReload"),
+                                      tip="Rescan the current frequency selection",
                                       checkable=False,
                                       triggered=self.do_scan)
 
-        max_hold_action = create_action(self, _("Max Hold"),
+        max_hold_action = create_action(self, "Max Hold",
                                         shortcut="Ctrl+M",
-                                        icon=get_std_icon("ArrowUp"),
-                                        tip=_("Display the maximum value encountered"),
+                                        icon=get_std_icon(self, "ArrowUp"),
+                                        tip="Display the maximum value encountered",
                                         checkable=True,
                                         triggered=self.do_max_hold)
 
-        log_lin_action = create_action(self, _("Log/Lin"),
+        log_lin_action = create_action(self, "Log/Lin",
                                        shortcut="Ctrl+L",
-                                       icon=get_std_icon("ArrowRight"),
-                                       tip=_("Use linear power receive mode"),
+                                       icon=get_std_icon(self, "ArrowRight"),
+                                       tip="Use linear power receive mode",
                                        checkable=True,
                                        triggered=self.do_log_lin)
 
-        new_plot_action = create_action(self, _("New Plot"),
+        new_plot_action = create_action(self, "New Plot",
                                         shortcut="Ctrl+N",
-                                        icon=get_std_icon("ArrowLeft"),
-                                        tip=_("Creates a new labeled plot"),
+                                        icon=get_std_icon(self, "ArrowLeft"),
+                                        tip="Creates a new labeled plot",
                                         checkable=False,
                                         triggered=self.do_new_plot)
         
@@ -445,13 +487,13 @@ class MainWindow(QMainWindow):
 
     def saveFileDialog(self):
         print('Save f dialog')
-        fileName = QFileDialog.getSaveFileName(self, _("Save Cal Data"), self.file_dir)
+        fileName = QFileDialog.getSaveFileName(self, "Save Cal Data", self.file_dir)
         print(fileName)
         self.mainwidget.save_cal_data(fileName)
 
     def loadFileDialog(self):
         print('load f dialog')
-        fileName = QFileDialog.getOpenFileName(self, _("Open Cal Data"), self.file_dir)
+        fileName = QFileDialog.getOpenFileName(self, "Open Cal Data", self.file_dir)
         print(fileName)
         self.mainwidget.load_cal_data(fileName)
 

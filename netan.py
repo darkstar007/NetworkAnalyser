@@ -316,22 +316,16 @@ class PlotWidget(QSplitter):
         #self.item[label].plot().replot()
 
     def rescan(self):
-        print('Rescan', self.curvewidget.plot.get_axis_limits(BasePlot.X_BOTTOM))
-        ax = self.curvewidget.plot.get_axis_limits(BasePlot.X_BOTTOM)
-        un = self.curvewidget.plot.get_axis_unit(BasePlot.X_BOTTOM)
-        if un == 'MHz':
-            factor = 1e6
-        elif un == 'GHz':
-            factor = 1e9
-        else:
-            factor = 1.0
+        print('Rescan', self.curvewidget.getAxis('bottom'))
+        ax = self.curvewidget.getAxis('bottom')
+        print(ax, ax.range, ax.labelUnits, ax.labelUnitPrefix)
 
         self.reset_data()
 
-        self.bg7.setParams(ax[0] * factor, (ax[1]-ax[0]) * factor)
+        self.bg7.setParams(ax.range[0], ax.range[1] - ax.range[0])
 
-        self.settings.setValue('spectrum/start_freq', ax[0] * factor)
-        self.settings.setValue('spectrum/bandwidth', (ax[1] - ax[0]) * factor)
+        self.settings.setValue('spectrum/start_freq', ax.range[0])
+        self.settings.setValue('spectrum/bandwidth', (ax.range[1] - ax.range[0]))
 
         #self.bg7.start()
 

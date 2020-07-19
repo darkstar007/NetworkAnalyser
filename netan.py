@@ -166,7 +166,7 @@ class PlotWidget(QSplitter):
         print(start_freq, bandwidth, numpts, self.atten)
 
         default_cal_slope = 3.3 / (1024.0 * 16.44e-3)      # 16.44mV/dB, 3.3 V supply to ADC, 10 bit ADC
-        default_cal_icept = -89.0                       # 0 ADC value = -89dBm
+        default_cal_icept = -101.0                       # 0 ADC value = -89dBm
 
         self.cal_slope = self.settings.value('spectrum/cal_slope', default_cal_slope)
         self.cal_icept = self.settings.value('spectrum/cal_icept', default_cal_icept)
@@ -481,7 +481,7 @@ class MainWindow(QMainWindow):
 
     def saveFileDialog(self):
         print('Save f dialog')
-        fileName = QFileDialog.getSaveFileName(self, "Save Cal Data", self.file_dir)
+        fileName = QFileDialog.getSaveFileName(self, "Save Cal Data", self.file_dir)[0]
         print(fileName)
         self.mainwidget.save_cal_data(fileName)
 

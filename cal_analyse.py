@@ -14,13 +14,13 @@ for f in sys.argv[1:]:
     print(f)
     fp = open(f, 'rb')
     data = pickle.load(fp)
-    atten.append(-int(f.split('.')[0].split('n')[1].split('db')[0]))
+    atten.append(-int(f.split('.')[0].split('n')[1].split('dBm')[0]))
     atten_delog.append(10.0 ** (atten[-1]/10.0))
 
     att_vals[str(atten[-1])] = data['Mean']['data'][:]
     att_vals_delog[str(atten[-1])] = 10.0 ** (data['Mean']['data'][:] / 10.0)
     dlen = data['Mean']['data'].shape[0]
-
+    print(atten[-1], np.max(att_vals[str(atten[-1])]))
 for a in atten:
     plt.plot(att_vals[str(a)], label=str(a))
 

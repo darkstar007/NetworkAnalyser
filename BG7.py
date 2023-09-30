@@ -9,9 +9,20 @@
 #
 #
 
-from guidata.qt.QtCore import QSettings, QThread, QTimer, QObject
-from guidata.qt.QtCore import (QSize, QT_VERSION_STR, PYQT_VERSION_STR, Qt,
-                               Signal, pyqtSignal)
+#from guidata.qt.QtCore import QSettings, QThread, QTimer, QObject
+#from guidata.qt.QtCore import (QSize, QT_VERSION_STR, PYQT_VERSION_STR, Qt,
+#                               Signal, pyqtSignal)
+
+try:
+    import PyQt5
+    from PyQt5.QtWidgets import QSplitter, QApplication, QMainWindow, QDesktopWidget, QFileDialog, QStyle, QAction, QProgressBar
+    from PyQt5.QtCore import QSettings, QSize, Qt, QLocale,QThread,pyqtSignal
+    from PyQt5.QtGui import QGuiApplication
+except ImportError:
+    import PySide
+    from PySide.QtCore import QSettings, QSize, Qt, QLocale
+    from PySide.QtGui import QSplitter, QApplication, QMainWindow, QDesktopWidget, QFileDialog, QMessageBox
+
 import time
 import datetime
 import serial

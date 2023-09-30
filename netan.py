@@ -24,7 +24,7 @@ import numpy as np
 
 try:
     import PyQt5
-    from PyQt5.QtWidgets import QSplitter, QApplication, QMainWindow, QDesktopWidget, QFileDialog, QStyle, QAction, QProgressBar
+    from PyQt5.QtWidgets import QSplitter, QApplication, QMainWindow, QDesktopWidget, QFileDialog, QStyle, QAction, QProgressBar,QApplication
     from PyQt5.QtCore import QSettings, QSize, Qt, QLocale
     from PyQt5.QtGui import QGuiApplication
 except ImportError:
@@ -515,7 +515,7 @@ def usage():
 
 
 if __name__ == '__main__':
-    from guidata import qapplication
+    
     try:
         optlist, args = getopt.getopt(sys.argv[1:], 'rs:b:n:md:c:o:a:',
                                       ['reset', 'start_freq=', 'bandwidth=', 'numpts=',
@@ -566,7 +566,7 @@ if __name__ == '__main__':
             raise ValueError('Need to set a bandwidth if setting the centre freq')            
         else:
             start_freq = centre_freq - bandwidth / 2.0
-    app = qapplication()
+    app = QApplication([])
     window = MainWindow(reset=reset, start_freq=start_freq,
                         bandwidth=bandwidth, numpts=numpts,
                         max_hold=max_hold, dev=dev, atten=atten,
